@@ -65,7 +65,13 @@ class FastFlightsSource(PriceSource):
         # rota la grilla de fechas en cada barrido (cambia cada 3 h)
         rotation = int(time.time() // (3 * 3600)) + (route.id or 0)
 
-        for dep in sample_dates(start, end, max_samples=samples, rotation=rotation):
+        dep_dates = sample_dates(start, end, max_samples=samples, rotation=rotation)
+        ret_dates: list[date] = []
+        if route.is_open_jaw:
+            # multidestino: la vuelta tiene su propia ventana; se rota igual
+            ret_dates = sample_dates(*route.ret_range, max_samples=samples, rotation=rotation + 1)
+
+        for i, dep in enumerate(dep_dates):
             legs = [
                 FlightQuery(
                     date=dep.isoformat(),
@@ -76,7 +82,19 @@ class FastFlightsSource(PriceSource):
             ]
             trip = "one-way"
             ret: date | None = None
-            if route.return_after_days:
+            if route.is_open_jaw:
+                # ida ORIGEN→DESTINO y vuelta desde OTRA ciudad: ret_origin→ORIGEN
+                ret = ret_dates[i % len(ret_dates)]
+                legs.append(
+                    FlightQuery(
+                        date=ret.isoformat(),
+                        from_airport=route.ret_origin,
+                        to_airport=route.origin,
+                        max_stops=max_stops,
+                    )
+                )
+                trip = "multi-city"
+            elif route.return_after_days:
                 # una sola duración de viaje (punto medio del rango),
                 # para no multiplicar la cantidad de búsquedas
                 lo, hi = route.return_after_days
@@ -95,7 +113,7 @@ class FastFlightsSource(PriceSource):
                 flights=legs,
                 trip=trip,
                 seat="economy",
-                passengers=Passengers(adults=max(route.adults, 1)),
+                passengers=Passengers(adults=max(route.adults, 1), children=route.children),
                 currency=route.currency,
                 language=self.language,
             )
