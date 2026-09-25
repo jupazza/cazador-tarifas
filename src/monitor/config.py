@@ -28,6 +28,7 @@ def load_routes_from_yaml(path: Path = CONFIG_PATH) -> list[RouteQuery]:
     for r in raw["routes"]:
         dr = r["depart_range"]
         rad = r.get("return_after_days")
+        rr = r.get("return_range")
         routes.append(
             RouteQuery(
                 name=r["name"],
@@ -40,6 +41,9 @@ def load_routes_from_yaml(path: Path = CONFIG_PATH) -> list[RouteQuery]:
                 drop_pct=r.get("drop_pct"),
                 nonstop=bool(r.get("nonstop", False)),
                 currency=currency,
+                children=int(r.get("children", 0)),
+                ret_origin=r["return_from"].upper() if r.get("return_from") else None,
+                ret_range=(_as_date(rr[0]), _as_date(rr[1])) if rr else None,
             )
         )
 

@@ -93,9 +93,11 @@ def _route_line(r: RouteQuery, storage: Storage) -> str:
         crit.append(f"baja {r.drop_pct:.0f}%")
     last = storage.last_price(r.key)
     last_txt = f" · último visto: {r.currency} {last:.0f}" if last is not None else ""
+    if r.is_open_jaw:
+        nights = f"vuelta {r.ret_origin}→{r.origin} entre {r.ret_range[0]} y {r.ret_range[1]}"
     return (
         f"<b>#{r.id}</b> · {esc(r.name)}\n"
-        f"   {r.origin}→{r.dest} · {r.depart_range[0]}→{r.depart_range[1]} · {nights} · {r.adults} pax\n"
+        f"   {r.origin}→{r.dest} · ida {r.depart_range[0]}→{r.depart_range[1]} · {nights} · {esc(r.pax_label)}\n"
         f"   {esc(' · '.join(crit) or 'sin criterio de alerta')}{last_txt}"
     )
 

@@ -19,8 +19,13 @@ _esc = esc
 
 def google_flights_link(route: RouteQuery, offer: Offer) -> str:
     q = f"Flights from {route.origin} to {route.dest} on {offer.depart_date}"
-    if offer.return_date:
+    if route.is_open_jaw and offer.return_date:
+        q = (f"Multi-city flights {route.origin} to {route.dest} on {offer.depart_date}, "
+             f"{route.ret_origin} to {route.origin} on {offer.return_date}")
+    elif offer.return_date:
         q += f" returning {offer.return_date}"
+    if route.adults + route.children > 1:
+        q += f" for {route.adults} adults" + (f" and {route.children} children" if route.children else "")
     return "https://www.google.com/travel/flights?" + urlencode({"q": q, "curr": offer.currency, "hl": "es-419"})
 
 
@@ -43,11 +48,14 @@ def format_leg(leg: FlightLeg) -> str:
 
 
 def format_alert(route: RouteQuery, offer: Offer, decision: AlertDecision) -> str:
-    trip = (
-        f"📅 Ida {offer.depart_date} · Vuelta {offer.return_date}"
-        if offer.return_date
-        else f"📅 Ida {offer.depart_date} (solo ida)"
-    )
+    if route.is_open_jaw and offer.return_date:
+        trip = (f"📅 Ida {offer.depart_date} ({route.origin}→{route.dest}) · "
+                f"Vuelta {offer.return_date} ({route.ret_origin}→{route.origin})")
+    elif offer.return_date:
+        trip = f"📅 Ida {offer.depart_date} · Vuelta {offer.return_date}"
+    else:
+        trip = f"📅 Ida {offer.depart_date} (solo ida)"
+    total_pax = route.adults + route.children
     header = (
         f"🚨 <b>POSIBLE TARIFA ERROR: {esc(route.name)}</b>"
         if decision.looks_like_error_fare
@@ -56,10 +64,11 @@ def format_alert(route: RouteQuery, offer: Offer, decision: AlertDecision) -> st
     lines = [
         header,
         "",
-        f"💰 <b>{esc(offer.currency)} {offer.price:,.0f}</b>  "
-        f"({esc(', '.join(decision.reasons))})",
+        f"💰 <b>{esc(offer.currency)} {offer.price:,.0f}</b>"
+        + (f" total ({esc(offer.currency)} {offer.price / total_pax:,.0f} por persona)" if total_pax > 1 else "")
+        + f"  ({esc(', '.join(decision.reasons))})",
         trip,
-        f"🛫 {esc(offer.carrier)} · {route.adults} pax",
+        f"🛫 {esc(offer.carrier)} · {esc(route.pax_label)}",
     ]
     if offer.outbound:
         label = "🧭 Vuelo" if not offer.return_date else "🧭 Ida"

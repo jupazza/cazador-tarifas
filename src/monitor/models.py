@@ -20,6 +20,21 @@ class RouteQuery:
     currency: str = "USD"
     id: int | None = None
     active: bool = True
+    children: int = 0
+    # Multidestino (open jaw): la vuelta sale de otra ciudad, en otra ventana de fechas
+    ret_origin: str | None = None
+    ret_range: tuple[date, date] | None = None
+
+    @property
+    def is_open_jaw(self) -> bool:
+        return self.ret_origin is not None and self.ret_range is not None
+
+    @property
+    def pax_label(self) -> str:
+        a = f"{self.adults} adulto" + ("s" if self.adults != 1 else "")
+        if self.children:
+            a += f" + {self.children} chico" + ("s" if self.children != 1 else "")
+        return a
 
     @property
     def key(self) -> str:

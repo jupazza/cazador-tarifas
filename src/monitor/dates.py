@@ -20,10 +20,11 @@ def sample_dates(start: date, end: date, max_samples: int = 4, rotation: int | N
         picked = {start + timedelta(days=round(i * step)) for i in range(max_samples)}
         return sorted(picked)
 
-    step = max(span // max_samples, 1)
-    offset = rotation % step
+    days = span + 1
+    step = max(days // max_samples, 1)
+    offset = rotation % days
     picked = {
-        start + timedelta(days=min(offset + i * step, span))
+        start + timedelta(days=(offset + i * step) % days)
         for i in range(max_samples)
     }
     return sorted(picked)
