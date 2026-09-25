@@ -10,8 +10,13 @@
 # target_price: TOPE en USD ida y vuelta; si aparece igual o menos, avisa
 # drop_pct: también avisa si el precio baja este % contra la mediana de 30 días
 #
+# adults / children: pasajeros (el precio y el tope son el TOTAL de todos)
+# return_from + return_range: multidestino (la vuelta sale de otra ciudad,
+#               en su propia ventana de fechas)
+#
 # Los topes son valores de arranque (aprox. la mitad de lo que suele salir);
 # ajustalos con /editar ID tope VALOR cuando veas los precios reales.
+# Rutas nuevas agregadas acá se suman en la próxima corrida (se reconocen por nombre).
 
 currency: USD
 
@@ -31,3 +36,8 @@ routes:
   # --- Brasil y región ---
   - {name: "Buenos Aires → Río",        origin: EZE, dest: GIG, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [5, 10], target_price: 200, drop_pct: 45}
   - {name: "Buenos Aires → Florianópolis", origin: EZE, dest: FLN, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [5, 10], target_price: 180, drop_pct: 45}
+
+  # --- Viaje familiar julio 2027 (2 adultos + 2 chicos; topes = total 4 personas) ---
+  - {name: "Julio 2027: Bs As ⇄ Nueva York (familia)", origin: EZE, dest: JFK, depart_range: ["2027-07-12", "2027-07-18"], return_after_days: [21, 25], adults: 2, children: 2, target_price: 2400, drop_pct: 30}
+  - {name: "Julio 2027: Bs As ⇄ Miami (familia)", origin: EZE, dest: MIA, depart_range: ["2027-07-12", "2027-07-18"], return_after_days: [21, 25], adults: 2, children: 2, target_price: 2000, drop_pct: 30}
+  - {name: "Julio 2027: Bs As → Nueva York / Miami → Bs As (familia)", origin: EZE, dest: JFK, depart_range: ["2027-07-14", "2027-07-18"], return_from: MIA, return_range: ["2027-08-02", "2027-08-08"], adults: 2, children: 2, target_price: 2600, drop_pct: 30}
