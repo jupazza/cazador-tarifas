@@ -6,6 +6,8 @@
 # origin / dest: código IATA del aeropuerto (EZE, MAD, JFK...)
 # depart_range: ventana de fechas de IDA; en cada barrido se prueban 3 fechas
 #               distintas dentro de esta ventana (van rotando)
+# rolling_days: ventana MÓVIL en lugar de fechas fijas: busca idas entre
+#               dentro de 7 días y dentro de N días (300 = 10 meses). No vence.
 # return_after_days: [mín, máx] noches de viaje (omitir = solo ida)
 # target_price: TOPE en USD ida y vuelta; si aparece igual o menos, avisa
 # drop_pct: también avisa si el precio baja este % contra la mediana de 30 días
@@ -22,22 +24,26 @@ currency: USD
 
 routes:
   # --- Europa ---
-  - {name: "Buenos Aires → Madrid",     origin: EZE, dest: MAD, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [10, 20], target_price: 600, drop_pct: 40}
-  - {name: "Buenos Aires → Barcelona",  origin: EZE, dest: BCN, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [10, 20], target_price: 600, drop_pct: 40}
-  - {name: "Buenos Aires → Roma",       origin: EZE, dest: FCO, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [10, 20], target_price: 650, drop_pct: 40}
-  - {name: "Buenos Aires → París",      origin: EZE, dest: CDG, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [10, 20], target_price: 650, drop_pct: 40}
-  - {name: "Buenos Aires → Lisboa",     origin: EZE, dest: LIS, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [10, 20], target_price: 600, drop_pct: 40}
+  - {name: "Buenos Aires → Madrid",     origin: EZE, dest: MAD, rolling_days: 300, return_after_days: [10, 20], target_price: 600, drop_pct: 40}
+  - {name: "Buenos Aires → Barcelona",  origin: EZE, dest: BCN, rolling_days: 300, return_after_days: [10, 20], target_price: 600, drop_pct: 40}
+  - {name: "Buenos Aires → Roma",       origin: EZE, dest: FCO, rolling_days: 300, return_after_days: [10, 20], target_price: 650, drop_pct: 40}
+  - {name: "Buenos Aires → París",      origin: EZE, dest: CDG, rolling_days: 300, return_after_days: [10, 20], target_price: 650, drop_pct: 40}
+  - {name: "Buenos Aires → Lisboa",     origin: EZE, dest: LIS, rolling_days: 300, return_after_days: [10, 20], target_price: 600, drop_pct: 40}
   # --- EEUU / Caribe ---
-  - {name: "Buenos Aires → Nueva York", origin: EZE, dest: JFK, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [7, 14], target_price: 450, drop_pct: 40}
-  - {name: "Buenos Aires → Miami",      origin: EZE, dest: MIA, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [7, 14], target_price: 450, drop_pct: 40}
-  - {name: "Buenos Aires → Orlando",    origin: EZE, dest: MCO, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [7, 14], target_price: 450, drop_pct: 40}
-  - {name: "Buenos Aires → Punta Cana", origin: EZE, dest: PUJ, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [7, 12], target_price: 450, drop_pct: 40}
-  - {name: "Buenos Aires → Cancún",     origin: EZE, dest: CUN, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [7, 12], target_price: 450, drop_pct: 40}
+  - {name: "Buenos Aires → Nueva York", origin: EZE, dest: JFK, rolling_days: 300, return_after_days: [7, 14], target_price: 450, drop_pct: 40}
+  - {name: "Buenos Aires → Miami",      origin: EZE, dest: MIA, rolling_days: 300, return_after_days: [7, 14], target_price: 450, drop_pct: 40}
+  - {name: "Buenos Aires → Orlando",    origin: EZE, dest: MCO, rolling_days: 300, return_after_days: [7, 14], target_price: 450, drop_pct: 40}
+  - {name: "Buenos Aires → Punta Cana", origin: EZE, dest: PUJ, rolling_days: 300, return_after_days: [7, 12], target_price: 450, drop_pct: 40}
+  - {name: "Buenos Aires → Cancún",     origin: EZE, dest: CUN, rolling_days: 300, return_after_days: [7, 12], target_price: 450, drop_pct: 40}
   # --- Brasil y región ---
-  - {name: "Buenos Aires → Río",        origin: EZE, dest: GIG, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [5, 10], target_price: 200, drop_pct: 45}
-  - {name: "Buenos Aires → Florianópolis", origin: EZE, dest: FLN, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [5, 10], target_price: 180, drop_pct: 45}
+  - {name: "Buenos Aires → Río",        origin: EZE, dest: GIG, rolling_days: 300, return_after_days: [5, 10], target_price: 200, drop_pct: 45}
+  - {name: "Buenos Aires → Florianópolis", origin: EZE, dest: FLN, rolling_days: 300, return_after_days: [5, 10], target_price: 180, drop_pct: 45}
 
   # --- Viaje familiar julio 2027 (2 adultos + 2 chicos; topes = total 4 personas) ---
   - {name: "Julio 2027: Bs As ⇄ Nueva York (familia)", origin: EZE, dest: JFK, depart_range: ["2027-07-12", "2027-07-18"], return_after_days: [21, 25], adults: 2, children: 2, target_price: 2400, drop_pct: 30}
   - {name: "Julio 2027: Bs As ⇄ Miami (familia)", origin: EZE, dest: MIA, depart_range: ["2027-07-12", "2027-07-18"], return_after_days: [21, 25], adults: 2, children: 2, target_price: 2000, drop_pct: 30}
   - {name: "Julio 2027: Bs As → Nueva York / Miami → Bs As (familia)", origin: EZE, dest: JFK, depart_range: ["2027-07-14", "2027-07-18"], return_from: MIA, return_range: ["2027-08-02", "2027-08-08"], adults: 2, children: 2, target_price: 2600, drop_pct: 30}
+
+  # --- Japón (2 adultos + 2 chicos; tope = total 4 personas; ventana móvil 10 meses) ---
+  - {name: "Japón: Bs As ⇄ Tokio Narita (familia)", origin: EZE, dest: NRT, rolling_days: 300, return_after_days: [21, 30], adults: 2, children: 2, target_price: 4000, drop_pct: 35}
+  - {name: "Japón: Bs As ⇄ Tokio Haneda (familia)", origin: EZE, dest: HND, rolling_days: 300, return_after_days: [21, 30], adults: 2, children: 2, target_price: 4000, drop_pct: 35}
