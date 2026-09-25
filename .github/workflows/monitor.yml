@@ -1,0 +1,68 @@
+name: cazador-tarifas
+
+on:
+  schedule:
+    # Cada hora, en el minuto 17 (GitHub demora los cron en punto).
+    # Cada corrida lee los feeds y los comandos de Telegram; cada 3 h además
+    # consulta precios en Google Flights.
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "Comando del bot para ejecutar ahora, sin la barra (ej: rutas). Vacío = corrida normal."
+        required: false
+        default: ""
+      forzar_barrido:
+        description: "Consultar precios ahora aunque no hayan pasado 3 h"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write             # para guardar data/history.db en el repo
+
+concurrency:
+  group: monitor
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Correr el cazador
+        env:
+          PYTHONPATH: src
+          PRICE_SOURCE: ${{ vars.PRICE_SOURCE || 'fastflights' }}
+          HORAS_ENTRE_BARRIDOS: ${{ vars.HORAS_ENTRE_BARRIDOS || '3' }}
+          FECHAS_POR_RUTA: ${{ vars.FECHAS_POR_RUTA || '3' }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_ALLOWED_CHAT_IDS: ${{ vars.TELEGRAM_ALLOWED_CHAT_IDS }}
+          BOT_COMMAND: ${{ github.event.inputs.command }}
+          FORZAR: ${{ github.event.inputs.forzar_barrido }}
+        run: |
+          if [ -n "$BOT_COMMAND" ]; then
+            python -m monitor.main --command "$BOT_COMMAND"
+          elif [ "$FORZAR" = "true" ]; then
+            python -m monitor.main --sweep-now
+          else
+            python -m monitor.main
+          fi
+
+      - name: Guardar historial
+        if: always()   # guarda lo recolectado aunque falle el envío
+        run: |
+          git config user.name  "cazador-bot"
+          git config user.email "cazador-bot@users.noreply.github.com"
+          git add -f data/history.db || true
+          git commit -m "chore: actualiza historial [skip ci]" || echo "sin cambios"
+          git push || true
