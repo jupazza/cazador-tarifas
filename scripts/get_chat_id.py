@@ -29,3 +29,14 @@ for u in updates:
     if chat and chat["id"] not in seen:
         seen.add(chat["id"])
         print(f"chat_id={chat['id']}  ({chat.get('first_name') or chat.get('title')})")
+
+# Mensaje de prueba opcional (input "mensaje" del workflow)
+texto = os.environ.get("MENSAJE", "").strip()
+if texto:
+    for chat_id in seen:
+        resp = requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": texto},
+            timeout=20,
+        )
+        print(f"mensaje a {chat_id}: {'enviado' if resp.ok else resp.text}")
