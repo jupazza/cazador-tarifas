@@ -131,6 +131,25 @@ class Storage:
         ).fetchone()
         return row[0] if row else None
 
+    def route_stats(self, route_key: str, days: int = 30) -> dict | None:
+        """Resumen de lo encontrado para una ruta en los últimos `days` días."""
+        since = (date.today() - timedelta(days=days)).isoformat()
+        rows = self.conn.execute(
+            "SELECT price, depart_date, return_date, carrier, seen_at FROM price_history "
+            "WHERE route_key=? AND seen_at>=? ORDER BY seen_at",
+            (route_key, since),
+        ).fetchall()
+        if not rows:
+            return None
+        best = min(rows, key=lambda r: r[0])
+        last = rows[-1]
+        return {
+            "count": len(rows),
+            "last": last[0], "last_seen": last[4],
+            "min": best[0], "min_depart": best[1], "min_return": best[2], "min_carrier": best[3],
+            "median": self.median_last_days(route_key, days),
+        }
+
     def median_last_days(self, route_key: str, days: int = 30) -> float | None:
         since = (date.today() - timedelta(days=days)).isoformat()
         rows = self.conn.execute(

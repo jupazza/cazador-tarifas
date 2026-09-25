@@ -7,6 +7,23 @@ import requests
 API = "https://api.telegram.org/bot{token}/{method}"
 
 
+def split_message(text: str, limit: int = 3900) -> list[str]:
+    """Parte un texto largo en bloques, cortando entre párrafos."""
+    if len(text) <= limit:
+        return [text]
+    chunks, cur = [], ""
+    for para in text.split("\n\n"):
+        cand = f"{cur}\n\n{para}" if cur else para
+        if len(cand) > limit and cur:
+            chunks.append(cur)
+            cur = para
+        else:
+            cur = cand
+    if cur:
+        chunks.append(cur)
+    return chunks
+
+
 class TelegramClient:
     """Cliente fino da Bot API — sem lógica de negócio."""
 
@@ -15,6 +32,11 @@ class TelegramClient:
         self.chat_id = chat_id or os.environ.get("TELEGRAM_CHAT_ID")
 
     def send_message(self, text: str, chat_id: str | int | None = None) -> None:
+        # Telegram corta en 4096 caracteres: se parte en bloques por párrafo
+        for chunk in split_message(text):
+            self._send_one(chunk, chat_id)
+
+    def _send_one(self, text: str, chat_id: str | int | None = None) -> None:
         resp = requests.post(
             API.format(token=self.token, method="sendMessage"),
             json={

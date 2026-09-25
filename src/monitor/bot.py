@@ -86,22 +86,47 @@ def _route_line(r: RouteQuery, storage: Storage) -> str:
         nights = f"{lo} noches" if lo == hi else f"{lo}–{hi} noches"
     else:
         nights = "solo ida"
-    crit = []
-    if r.target_price is not None:
-        crit.append(f"tope {r.currency} {r.target_price:.0f}")
-    if r.drop_pct is not None:
-        crit.append(f"baja {r.drop_pct:.0f}%")
-    last = storage.last_price(r.key)
-    last_txt = f" · último visto: {r.currency} {last:.0f}" if last is not None else ""
     if r.is_open_jaw:
         nights = f"vuelta {r.ret_origin}→{r.origin} entre {r.ret_range[0]} y {r.ret_range[1]}"
     ida = (f"ida en los próximos {r.rolling_days} días" if r.rolling_days
            else f"ida {r.depart_range[0]}→{r.depart_range[1]}")
-    return (
-        f"<b>#{r.id}</b> · {esc(r.name)}\n"
-        f"   {r.origin}→{r.dest} · {ida} · {nights} · {esc(r.pax_label)}\n"
-        f"   {esc(' · '.join(crit) or 'sin criterio de alerta')}{last_txt}"
-    )
+    crit = []
+    if r.target_price is not None:
+        crit.append(f"tope {r.target_price:,.0f}")
+    if r.drop_pct is not None:
+        crit.append(f"avisa si baja {r.drop_pct:.0f}%")
+    lines = [
+        f"<b>#{r.id} · {esc(r.name)}</b>",
+        f"   {r.origin}→{r.dest} · {ida} · {nights} · {esc(r.pax_label)}",
+        f"   🎯 {esc(' · '.join(crit) or 'sin criterio de alerta')} ({r.currency}, total)",
+    ]
+    lines += _diagnosis(r, storage)
+    return "\n".join(lines)
+
+
+def _diagnosis(r: RouteQuery, storage: Storage) -> list[str]:
+    """Diagnóstico de lo encontrado en los últimos 30 días."""
+    st = storage.route_stats(r.key)
+    if not st:
+        return ["   ⏳ todavía sin precios (se consulta cada 3 h)"]
+    cur = r.currency
+    pax = r.adults + r.children
+    pp = f" ({st['min'] / pax:,.0f} c/u)" if pax > 1 else ""
+    fechas = st["min_depart"] + (f" → {st['min_return']}" if st["min_return"] else "")
+    out = [
+        f"   💵 último: {cur} {st['last']:,.0f} · normal: {cur} {st['median']:,.0f} · {st['count']} consultas en 30 días",
+        f"   🏆 mínimo: <b>{cur} {st['min']:,.0f}</b>{pp} · {esc(fechas)} · {esc(st['min_carrier'] or '')}",
+    ]
+    if r.target_price:
+        gap = (st["min"] / r.target_price - 1) * 100
+        if gap <= 0:
+            verdict = "🟢 ¡por debajo del tope!"
+        elif gap <= 15:
+            verdict = f"🟡 cerca: el mínimo está {gap:.0f}% arriba del tope"
+        else:
+            verdict = f"⚪ lejos: el mínimo está {gap:.0f}% arriba del tope"
+        out.append(f"   {verdict}")
+    return out
 
 
 # --- comandos -------------------------------------------------------------
@@ -113,7 +138,10 @@ def cmd_list(args, storage) -> str:
     routes = storage.list_routes(active_only=True)
     if not routes:
         return "No hay rutas activas. Creá una con /crear."
-    return "📋 <b>Rutas vigiladas</b>\n\n" + "\n\n".join(_route_line(r, storage) for r in routes)
+    hrs = storage.hours_since_last_sweep()
+    ult = "nunca" if hrs == float("inf") else f"hace {hrs:.1f} h"
+    header = f"📋 <b>Rutas vigiladas: {len(routes)}</b> · último barrido de precios: {ult}"
+    return header + "\n\n" + "\n\n".join(_route_line(r, storage) for r in routes)
 
 
 def cmd_create(args, storage) -> str:
