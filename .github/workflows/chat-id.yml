@@ -4,6 +4,11 @@ name: obtener-chat-id
 # En el log aparece tu chat_id, que va como secret TELEGRAM_CHAT_ID.
 on:
   workflow_dispatch:
+    inputs:
+      mensaje:
+        description: "Mensaje de prueba para mandar al chat (opcional)"
+        required: false
+        default: ""
 
 jobs:
   chat-id:
@@ -17,4 +22,5 @@ jobs:
       - name: Buscar chat_id
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          MENSAJE: ${{ github.event.inputs.mensaje }}
         run: python scripts/get_chat_id.py
