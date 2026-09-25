@@ -72,7 +72,32 @@ class FastFlightsSource(PriceSource):
             # multidestino: la vuelta tiene su propia ventana; se rota igual
             ret_dates = sample_dates(*route.ret_range, max_samples=samples, rotation=rotation + 1)
 
+        # La librería falla con chicos: se cotizan como adultos (en vuelos
+        # internacionales suelen pagar casi lo mismo, así que el precio es conservador).
+        pax = Passengers(adults=max(route.adults + route.children, 1))
+
         for i, dep in enumerate(dep_dates):
+            if route.is_open_jaw:
+                # La librería falla con multidestino: se arma con dos pasajes
+                # de solo ida (ORIGEN→DESTINO + ret_origin→ORIGEN) y se suman.
+                ret = ret_dates[i % len(ret_dates)]
+                ida = self._one_way(route, route.origin, route.dest, dep, pax, max_stops)
+                vuelta = self._one_way(route, route.ret_origin, route.origin, ret, pax, max_stops)
+                if ida and vuelta:
+                    offers.append(
+                        Offer(
+                            route_key=route.key,
+                            price=ida.price + vuelta.price,
+                            currency=route.currency,
+                            depart_date=dep,
+                            return_date=ret,
+                            carrier=f"ida {ida.carrier} / vuelta {vuelta.carrier}",
+                            stops=ida.stops,
+                            outbound=ida.outbound,
+                        )
+                    )
+                continue
+
             legs = [
                 FlightQuery(
                     date=dep.isoformat(),
@@ -83,19 +108,7 @@ class FastFlightsSource(PriceSource):
             ]
             trip = "one-way"
             ret: date | None = None
-            if route.is_open_jaw:
-                # ida ORIGEN→DESTINO y vuelta desde OTRA ciudad: ret_origin→ORIGEN
-                ret = ret_dates[i % len(ret_dates)]
-                legs.append(
-                    FlightQuery(
-                        date=ret.isoformat(),
-                        from_airport=route.ret_origin,
-                        to_airport=route.origin,
-                        max_stops=max_stops,
-                    )
-                )
-                trip = "multi-city"
-            elif route.return_after_days:
+            if route.return_after_days:
                 # una sola duración de viaje (punto medio del rango),
                 # para no multiplicar la cantidad de búsquedas
                 lo, hi = route.return_after_days
@@ -110,38 +123,44 @@ class FastFlightsSource(PriceSource):
                 )
                 trip = "round-trip"
 
-            query = create_query(
-                flights=legs,
-                trip=trip,
-                seat="economy",
-                passengers=Passengers(adults=max(route.adults, 1), children=route.children),
-                currency=route.currency,
-                language=self.language,
-            )
-
-            results = self._fetch(query, f"{route.name} {dep}")
-            if results is None:
-                continue
-
-            for fl in results:
-                if not fl.price or fl.price <= 0 or not fl.flights:
-                    continue  # "precio no disponible"
-                offers.append(
-                    Offer(
-                        route_key=route.key,
-                        price=float(fl.price),
-                        currency=route.currency,
-                        depart_date=dep,
-                        return_date=ret,
-                        carrier=", ".join(fl.airlines) if fl.airlines else str(fl.type),
-                        stops=max(len(fl.flights) - 1, 0),  # escalas del tramo de ida
-                        outbound=_build_leg(fl.flights),
-                    )
-                )
-
-            time.sleep(self.pause_s)  # no saturar a Google
+            offers += self._offers(route, legs, trip, pax, dep, ret)
 
         return offers
+
+    def _offers(self, route, legs, trip, pax, dep, ret) -> list[Offer]:
+        query = create_query(
+            flights=legs,
+            trip=trip,
+            seat="economy",
+            passengers=pax,
+            currency=route.currency,
+            language=self.language,
+        )
+        results = self._fetch(query, f"{route.name} {dep}")
+        time.sleep(self.pause_s)  # no saturar a Google
+        out: list[Offer] = []
+        for fl in results or []:
+            if not fl.price or fl.price <= 0 or not fl.flights:
+                continue  # "precio no disponible"
+            out.append(
+                Offer(
+                    route_key=route.key,
+                    price=float(fl.price),
+                    currency=route.currency,
+                    depart_date=dep,
+                    return_date=ret,
+                    carrier=", ".join(fl.airlines) if fl.airlines else str(fl.type),
+                    stops=max(len(fl.flights) - 1, 0),  # escalas del tramo de ida
+                    outbound=_build_leg(fl.flights),
+                )
+            )
+        return out
+
+    def _one_way(self, route, frm, to, day, pax, max_stops) -> Offer | None:
+        """Pasaje de solo ida más barato de frm a to en `day` (o None)."""
+        legs = [FlightQuery(date=day.isoformat(), from_airport=frm, to_airport=to, max_stops=max_stops)]
+        found = self._offers(route, legs, "one-way", pax, day, None)
+        return min(found, key=lambda o: o.price) if found else None
 
     def _fetch(self, query, label: str):
         """get_flights con reintentos: el parser de la librería a veces falla
