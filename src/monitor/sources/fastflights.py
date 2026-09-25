@@ -56,8 +56,9 @@ class FastFlightsSource(PriceSource):
         max_stops = 0 if route.nonstop else None
 
         # nunca buscar fechas pasadas ni demasiado cercanas
-        start = max(route.depart_range[0], date.today() + timedelta(days=3))
-        end = route.depart_range[1]
+        win = route.effective_depart_range
+        start = max(win[0], date.today() + timedelta(days=3))
+        end = win[1]
         if start > end:
             print(f"[aviso] {route.name}: la ventana de ida ya pasó — editala con /editar", file=sys.stderr)
             return offers
