@@ -17,7 +17,7 @@ HELP = (
     "/crear ORIG DEST IDA_DESDE..IDA_HASTA NOCHES TOPE [BAJA%] [--directo] [--pax N]\n"
     "    ej: <code>/crear EZE JFK 2026-11-01..2027-03-31 7-14 450 40</code>\n"
     "    solo ida: poné <code>-</code> en NOCHES\n"
-    "/editar ID CAMPO VALOR — campos: nombre tope baja pax directo ida_desde ida_hasta noches\n"
+    "/editar ID CAMPO VALOR — campos: nombre tope baja pax directo ida_desde ida_hasta noches ventana\n"
     "    ej: <code>/editar 3 tope 400</code>\n"
     "/borrar ID — elimina (confirmá con <code>/borrar ID si</code>)\n"
     "/pausar ID   /activar ID"
@@ -95,9 +95,11 @@ def _route_line(r: RouteQuery, storage: Storage) -> str:
     last_txt = f" · último visto: {r.currency} {last:.0f}" if last is not None else ""
     if r.is_open_jaw:
         nights = f"vuelta {r.ret_origin}→{r.origin} entre {r.ret_range[0]} y {r.ret_range[1]}"
+    ida = (f"ida en los próximos {r.rolling_days} días" if r.rolling_days
+           else f"ida {r.depart_range[0]}→{r.depart_range[1]}")
     return (
         f"<b>#{r.id}</b> · {esc(r.name)}\n"
-        f"   {r.origin}→{r.dest} · ida {r.depart_range[0]}→{r.depart_range[1]} · {nights} · {esc(r.pax_label)}\n"
+        f"   {r.origin}→{r.dest} · {ida} · {nights} · {esc(r.pax_label)}\n"
         f"   {esc(' · '.join(crit) or 'sin criterio de alerta')}{last_txt}"
     )
 
@@ -193,8 +195,17 @@ def cmd_edit(args, storage) -> str:
         storage.update_route(route_id, **{_EDIT_FIELDS[field]: _date(value_raw)})
     elif field == "nombre":
         storage.update_route(route_id, name=value_raw)
+    elif field == "ventana":
+        if value_raw.strip() in ("-", "0"):
+            storage.update_route(route_id, rolling_days=None)
+        else:
+            try:
+                days = int(value_raw)
+            except ValueError:
+                raise CommandError("ventana: poné la cantidad de días (ej: 300) o '-' para usar fechas fijas")
+            storage.update_route(route_id, rolling_days=days)
     else:
-        raise CommandError(f"campo desconocido: '{field}'\ncampos: {', '.join(_EDIT_FIELDS)}, noches")
+        raise CommandError(f"campo desconocido: '{field}'\ncampos: {', '.join(_EDIT_FIELDS)}, noches, ventana")
 
     return f"✏️ #{route_id} actualizada.\n\n{_route_line(storage.get_route(route_id), storage)}"
 

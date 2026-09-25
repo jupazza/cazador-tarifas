@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 
 
 @dataclass
@@ -24,6 +24,16 @@ class RouteQuery:
     # Multidestino (open jaw): la vuelta sale de otra ciudad, en otra ventana de fechas
     ret_origin: str | None = None
     ret_range: tuple[date, date] | None = None
+    # Ventana móvil: si está, la ida se busca entre hoy+7 y hoy+rolling_days
+    # (no vence nunca; ignora depart_range)
+    rolling_days: int | None = None
+
+    @property
+    def effective_depart_range(self) -> tuple[date, date]:
+        if self.rolling_days:
+            today = date.today()
+            return (today + timedelta(days=7), today + timedelta(days=self.rolling_days))
+        return self.depart_range
 
     @property
     def is_open_jaw(self) -> bool:

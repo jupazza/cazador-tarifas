@@ -55,7 +55,8 @@ CREATE TABLE IF NOT EXISTS routes (
     children     INTEGER NOT NULL DEFAULT 0,
     ret_origin   TEXT,
     ret_from     TEXT,
-    ret_to       TEXT
+    ret_to       TEXT,
+    rolling_days INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT NOT NULL);
@@ -72,7 +73,7 @@ CREATE TABLE IF NOT EXISTS feed_seen (
 ROUTE_COLUMNS = (
     "name", "origin", "dest", "depart_from", "depart_to", "return_min", "return_max",
     "adults", "target_price", "drop_pct", "nonstop", "currency", "active",
-    "children", "ret_origin", "ret_from", "ret_to",
+    "children", "ret_origin", "ret_from", "ret_to", "rolling_days",
 )
 
 # Columnas agregadas después de la primera versión: se suman a bases viejas.
@@ -81,6 +82,7 @@ _MIGRATIONS = {
     "ret_origin": "TEXT",
     "ret_from": "TEXT",
     "ret_to": "TEXT",
+    "rolling_days": "INTEGER",
 }
 
 
@@ -95,6 +97,12 @@ class Storage:
         for col, decl in _MIGRATIONS.items():
             if col not in existing:
                 self.conn.execute(f"ALTER TABLE routes ADD COLUMN {col} {decl}")
+        # Una sola vez: las 12 rutas generales pasan a ventana móvil de 10 meses
+        if not self.conn.execute("SELECT 1 FROM kv WHERE k='upgrade_rolling_v1'").fetchone():
+            self.conn.execute(
+                "UPDATE routes SET rolling_days=300 WHERE depart_to='2027-06-30' AND rolling_days IS NULL"
+            )
+            self.conn.execute("INSERT OR REPLACE INTO kv (k, v) VALUES ('upgrade_rolling_v1', '1')")
         self.conn.commit()
 
     # --- histórico de preços ------------------------------------------------
@@ -215,6 +223,7 @@ class Storage:
                 children=r.children, ret_origin=r.ret_origin,
                 ret_from=r.ret_range[0].isoformat() if r.ret_range else None,
                 ret_to=r.ret_range[1].isoformat() if r.ret_range else None,
+                rolling_days=r.rolling_days,
             )
             added += 1
         return added
@@ -284,4 +293,5 @@ def _row_to_route(row: sqlite3.Row) -> RouteQuery:
             (date.fromisoformat(row["ret_from"]), date.fromisoformat(row["ret_to"]))
             if row["ret_from"] and row["ret_to"] else None
         ),
+        rolling_days=row["rolling_days"],
     )

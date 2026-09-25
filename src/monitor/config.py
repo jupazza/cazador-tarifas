@@ -26,7 +26,8 @@ def load_routes_from_yaml(path: Path = CONFIG_PATH) -> list[RouteQuery]:
     currency = raw.get("currency", "USD")
     routes: list[RouteQuery] = []
     for r in raw["routes"]:
-        dr = r["depart_range"]
+        rolling = r.get("rolling_days")
+        dr = r.get("depart_range") or [date.today().isoformat(), date.today().isoformat()]
         rad = r.get("return_after_days")
         rr = r.get("return_range")
         routes.append(
@@ -44,6 +45,7 @@ def load_routes_from_yaml(path: Path = CONFIG_PATH) -> list[RouteQuery]:
                 children=int(r.get("children", 0)),
                 ret_origin=r["return_from"].upper() if r.get("return_from") else None,
                 ret_range=(_as_date(rr[0]), _as_date(rr[1])) if rr else None,
+                rolling_days=int(rolling) if rolling else None,
             )
         )
 
