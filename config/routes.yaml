@@ -1,0 +1,33 @@
+# RUTAS INICIALES — se cargan UNA sola vez, en la primera corrida, a la base
+# de datos (data/history.db). Después se manejan desde Telegram con
+# /rutas, /crear, /editar, /pausar, /borrar. Cambiar este archivo después de
+# la primera corrida no tiene efecto.
+#
+# origin / dest: código IATA del aeropuerto (EZE, MAD, JFK...)
+# depart_range: ventana de fechas de IDA; en cada barrido se prueban 3 fechas
+#               distintas dentro de esta ventana (van rotando)
+# return_after_days: [mín, máx] noches de viaje (omitir = solo ida)
+# target_price: TOPE en USD ida y vuelta; si aparece igual o menos, avisa
+# drop_pct: también avisa si el precio baja este % contra la mediana de 30 días
+#
+# Los topes son valores de arranque (aprox. la mitad de lo que suele salir);
+# ajustalos con /editar ID tope VALOR cuando veas los precios reales.
+
+currency: USD
+
+routes:
+  # --- Europa ---
+  - {name: "Buenos Aires → Madrid",     origin: EZE, dest: MAD, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [10, 20], target_price: 600, drop_pct: 40}
+  - {name: "Buenos Aires → Barcelona",  origin: EZE, dest: BCN, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [10, 20], target_price: 600, drop_pct: 40}
+  - {name: "Buenos Aires → Roma",       origin: EZE, dest: FCO, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [10, 20], target_price: 650, drop_pct: 40}
+  - {name: "Buenos Aires → París",      origin: EZE, dest: CDG, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [10, 20], target_price: 650, drop_pct: 40}
+  - {name: "Buenos Aires → Lisboa",     origin: EZE, dest: LIS, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [10, 20], target_price: 600, drop_pct: 40}
+  # --- EEUU / Caribe ---
+  - {name: "Buenos Aires → Nueva York", origin: EZE, dest: JFK, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [7, 14], target_price: 450, drop_pct: 40}
+  - {name: "Buenos Aires → Miami",      origin: EZE, dest: MIA, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [7, 14], target_price: 450, drop_pct: 40}
+  - {name: "Buenos Aires → Orlando",    origin: EZE, dest: MCO, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [7, 14], target_price: 450, drop_pct: 40}
+  - {name: "Buenos Aires → Punta Cana", origin: EZE, dest: PUJ, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [7, 12], target_price: 450, drop_pct: 40}
+  - {name: "Buenos Aires → Cancún",     origin: EZE, dest: CUN, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [7, 12], target_price: 450, drop_pct: 40}
+  # --- Brasil y región ---
+  - {name: "Buenos Aires → Río",        origin: EZE, dest: GIG, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [5, 10], target_price: 200, drop_pct: 45}
+  - {name: "Buenos Aires → Florianópolis", origin: EZE, dest: FLN, depart_range: ["2026-10-20", "2027-06-30"], return_after_days: [5, 10], target_price: 180, drop_pct: 45}

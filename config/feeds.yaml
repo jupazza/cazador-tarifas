@@ -1,0 +1,47 @@
+# FEEDS RSS de sitios que publican ofertas y tarifas error.
+# Se leen en cada corrida (cada hora). La primera vez se marca todo como
+# leído sin avisar, para no mandarte posts viejos.
+
+feeds:
+  - nombre: Promociones Aéreas
+    url: https://promociones-aereas.com.ar/feed/
+    todo_sale_de_buenos_aires: true   # todos sus posts salen de BUE
+
+  - nombre: Secret Flying
+    url: https://www.secretflying.com/feed/
+    avisar_todo_desde_buenos_aires: true   # si sale de BUE, siempre vale la pena
+
+  - nombre: Fly4free
+    url: https://www.fly4free.com/feed/
+    avisar_todo_desde_buenos_aires: true
+
+# Palabras que indican que un post sale de Buenos Aires (feeds internacionales)
+origen: ["Buenos Aires", "Argentina", "EZE", "Ezeiza", "Aeroparque"]
+
+# Si el post dice alguna de estas, se avisa siempre como POSIBLE TARIFA ERROR
+palabras_error:
+  ["tarifa error", "error de tarifa", "error fare", "mistake fare", "glitch",
+   "price error", "pricing error", "precio error", "error de precio"]
+
+# Posts que no interesan (paquetes con hotel, entradas, etc.)
+excluir: ["paquete", "paquetes", "all inclusive", "hotel", "crucero", "entradas", "tickets"]
+
+# Para Promociones Aéreas: avisa si el precio del título está por debajo del
+# tope del destino. Ej: "Vuelos a Milán a partir de U$D 913" -> Europa, tope 650.
+topes_por_destino:
+  - nombre: Europa
+    tope_usd: 650
+    destinos: [Madrid, Barcelona, Roma, Milan, Paris, Lisboa, Londres, Amsterdam,
+               Frankfurt, Munich, Zurich, Venecia, Florencia, Napoles, Oporto,
+               Sevilla, Valencia, Bruselas, Viena, Praga, Atenas, Estambul, Europa]
+  - nombre: EEUU y Caribe
+    tope_usd: 450
+    destinos: [Nueva York, New York, Miami, Orlando, Los Angeles, Las Vegas,
+               San Francisco, Houston, Dallas, Atlanta, Washington, Boston, Chicago,
+               Punta Cana, Cancun, Aruba, Curazao, Jamaica, Bahamas, Cuba, La Habana,
+               Varadero, San Andres, Santo Domingo, Bayahibe, Tulum, Mexico, Caribe]
+  - nombre: Brasil y región
+    tope_usd: 200
+    destinos: [Rio, Florianopolis, Floripa, Sao Paulo, Salvador, Maceio, Natal,
+               Recife, Fortaleza, Buzios, Porto Seguro, Brasil, Santiago, Lima,
+               Montevideo, Punta del Este, Asuncion, Bogota, Cartagena]
