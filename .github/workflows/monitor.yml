@@ -2,10 +2,10 @@ name: cazador-tarifas
 
 on:
   schedule:
-    # Cada hora, en el minuto 17 (GitHub demora los cron en punto).
+    # Cada 15 minutos (minutos corridos: GitHub demora los cron en punto).
     # Cada corrida lee los feeds y los comandos de Telegram; cada 3 h además
     # consulta precios en Google Flights.
-    - cron: "17 * * * *"
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
     inputs:
       command:
