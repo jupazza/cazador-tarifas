@@ -18,6 +18,7 @@ from .config import CONFIG_PATH, load_routes_from_yaml
 from .feeds import check_feeds
 from .notifier import TelegramNotifier, esc, format_alert
 from .rules import evaluate
+from .scoring import score_offer
 from .sources import get_source
 from .storage import Storage
 from .telegram import TelegramClient
@@ -43,6 +44,7 @@ def run_sweep(storage: Storage, dry_run: bool = False, source_name: str = "fastf
                 continue
             cheapest = min(offers, key=lambda o: o.price)
             decision = evaluate(route, cheapest, storage)  # antes de grabar: la referencia no incluye este precio
+            score = score_offer(route, cheapest, storage)
             storage.record(cheapest)
         except Exception:
             print(f"[error] {route.name}:\n{traceback.format_exc()}", file=sys.stderr)
@@ -52,7 +54,11 @@ def run_sweep(storage: Storage, dry_run: bool = False, source_name: str = "fastf
         print(f"[info] {route.name}: más barato {cheapest.currency} {cheapest.price:.0f} (mediana 30 días: {base})")
 
         if decision.should_alert:
-            msg = format_alert(route, cheapest, decision)
+            try:
+                verificado = source.verify(route, cheapest)
+            except Exception:
+                verificado = None
+            msg = format_alert(route, cheapest, decision, score=score, verificado=verificado)
             if dry_run or delivery_broken:
                 print("---- ALERTA (no enviada) ----\n" + msg + "\n------------------------------")
             else:

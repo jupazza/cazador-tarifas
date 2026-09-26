@@ -20,7 +20,8 @@ HELP = (
     "/editar ID CAMPO VALOR — campos: nombre tope baja pax directo ida_desde ida_hasta noches ventana\n"
     "    ej: <code>/editar 3 tope 400</code>\n"
     "/borrar ID — elimina (confirmá con <code>/borrar ID si</code>)\n"
-    "/pausar ID   /activar ID"
+    "/pausar ID   /activar ID\n"
+    "/ejemplo [ID] — muestra cómo se ve una alerta (precio inventado)"
 )
 
 
@@ -142,6 +143,38 @@ def cmd_list(args, storage) -> str:
     ult = "nunca" if hrs == float("inf") else f"hace {hrs:.1f} h"
     header = f"📋 <b>Rutas vigiladas: {len(routes)}</b> · último barrido de precios: {ult}"
     return header + "\n\n" + "\n\n".join(_route_line(r, storage) for r in routes)
+
+
+def cmd_example(args, storage) -> str:
+    """Muestra cómo se vería una alerta, con un precio inventado (70% más barato)."""
+    from datetime import timedelta
+
+    from .models import Offer
+    from .notifier import format_alert
+    from .rules import AlertDecision
+    from .scoring import score_offer
+
+    routes = storage.list_routes(active_only=True)
+    if not routes:
+        return "No hay rutas activas."
+    route = routes[0]
+    if args:
+        route = storage.get_route(_int_id(args[0])) or route
+    st = storage.route_stats(route.key)
+    base = st["median"] if st else (route.target_price or 1000) * 2
+    lo, _ = route.effective_depart_range
+    dep = lo + timedelta(days=30)
+    ret = None
+    if route.ret_range:
+        ret = route.ret_range[0]
+    elif route.return_after_days:
+        ret = dep + timedelta(days=route.return_after_days[0])
+    offer = Offer(route_key=route.key, price=round(base * 0.3), currency=route.currency,
+                  depart_date=dep, return_date=ret, carrier="Aerolínea de ejemplo", stops=1)
+    sc = score_offer(route, offer, storage)
+    dec = AlertDecision(True, ["ejemplo"], base, 70.0)
+    return ("🧪 <b>EJEMPLO — no es una oferta real</b>\n\n"
+            + format_alert(route, offer, dec, score=sc, verificado=True))
 
 
 def cmd_create(args, storage) -> str:
@@ -286,6 +319,7 @@ COMMANDS = {
     "editar": cmd_edit,
     "borrar": cmd_delete, "eliminar": cmd_delete,
     "pausar": cmd_pause, "activar": cmd_activate,
+    "ejemplo": cmd_example,
 }
 
 

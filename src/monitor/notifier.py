@@ -47,38 +47,86 @@ def format_leg(leg: FlightLeg) -> str:
     return " ".join(bits) + f" · {format_duration(leg.total_minutes)} en total"
 
 
-def format_alert(route: RouteQuery, offer: Offer, decision: AlertDecision) -> str:
-    if route.is_open_jaw and offer.return_date:
-        trip = (f"📅 Ida {offer.depart_date} ({route.origin}→{route.dest}) · "
-                f"Vuelta {offer.return_date} ({route.ret_origin}→{route.origin})")
+CIUDADES = {
+    "EZE": "BUE", "AEP": "BUE", "JFK": "Nueva York", "EWR": "Nueva York", "LGA": "Nueva York",
+    "MIA": "Miami", "MCO": "Orlando", "PUJ": "Punta Cana", "CUN": "Cancún", "MAD": "Madrid",
+    "BCN": "Barcelona", "FCO": "Roma", "CDG": "París", "LIS": "Lisboa", "GIG": "Río",
+    "FLN": "Florianópolis", "NRT": "Tokio (Narita)", "HND": "Tokio (Haneda)",
+}
+
+
+def ciudad(code: str) -> str:
+    return CIUDADES.get(code, code)
+
+
+def _usd(v: float, cur: str = "USD") -> str:
+    return f"{cur} {v:,.0f}".replace(",", ".")
+
+
+def format_alert(route: RouteQuery, offer: Offer, decision: AlertDecision, score=None, verificado=None) -> str:
+    cur = offer.currency
+    pax = route.adults + route.children
+    if route.is_open_jaw:
+        tipo = "MULTIDESTINO"
+        fechas = f"{offer.depart_date} → {offer.return_date} (vuelta desde {ciudad(route.ret_origin)})"
     elif offer.return_date:
-        trip = f"📅 Ida {offer.depart_date} · Vuelta {offer.return_date}"
+        tipo = "IDA Y VUELTA"
+        fechas = f"{offer.depart_date} → {offer.return_date}"
     else:
-        trip = f"📅 Ida {offer.depart_date} (solo ida)"
-    total_pax = route.adults + route.children
-    header = (
-        f"🚨 <b>POSIBLE TARIFA ERROR: {esc(route.name)}</b>"
-        if decision.looks_like_error_fare
-        else f"✈️ <b>Oferta: {esc(route.name)}</b>"
-    )
-    lines = [
-        header,
-        "",
-        f"💰 <b>{esc(offer.currency)} {offer.price:,.0f}</b>"
-        + (f" total ({esc(offer.currency)} {offer.price / total_pax:,.0f} por persona)" if total_pax > 1 else "")
-        + f"  ({esc(', '.join(decision.reasons))})",
-        trip,
-        f"🛫 {esc(offer.carrier)} · {esc(route.pax_label)}",
-    ]
-    if offer.outbound:
-        label = "🧭 Vuelo" if not offer.return_date else "🧭 Ida"
-        lines.append(f"{label}: {esc(format_leg(offer.outbound))}")
-    else:
-        stops = "directo" if offer.stops == 0 else f"{offer.stops} escala(s)"
-        lines.append(f"🧭 {stops}")
+        tipo = "SOLO IDA"
+        fechas = f"{offer.depart_date}"
+
     if decision.looks_like_error_fare:
-        lines += ["", "⚡ <i>Si te sirve, reservá rápido: estas tarifas duran horas. "
-                  "No compres hotel no reembolsable hasta que el pasaje esté emitido.</i>"]
+        header = f"🚨 <b>POSIBLE TARIFA ERROR</b>\n✈️ <b>{ciudad(route.origin)} → {esc(ciudad(route.dest))} · {_usd(offer.price, cur)}</b>"
+    else:
+        header = f"✈️ <b>{ciudad(route.origin)} → {esc(ciudad(route.dest))} · {_usd(offer.price, cur)}</b>"
+    lines = [header, f"<i>{esc(route.name)}</i>"]
+
+    if score is not None:
+        accion = "REVISAR YA" if score.value >= 75 else "REVISAR"
+        lines.append(f"{score.emoji} <b>{score.label} {score.value}</b> · {accion}")
+    lines.append(f"🗓 {tipo} · {esc(fechas)} · {esc(offer.carrier)}")
+
+    pp = f" ({_usd(offer.price / pax, cur)} c/u, {esc(route.pax_label)})" if pax > 1 else ""
+    if verificado is True:
+        estado = "✅ precio verificado (se volvió a consultar)"
+    elif verificado is False:
+        estado = "⚠️ al reconsultar ya no apareció: puede haber desaparecido"
+    else:
+        estado = "precio sin verificar"
+    lines.append(f"🔎 Detectado {_usd(offer.price, cur)}{pp} · {estado}")
+
+    if score is not None:
+        partes = [f"{score.consultas} consultas"]
+        if score.habitual:
+            partes.append(f"habitual {_usd(score.habitual, cur)}")
+        if score.minimo:
+            partes.append(f"mínimo {_usd(score.minimo, cur)}")
+        if score.vs_habitual_pct is not None:
+            partes.append(f"{score.vs_habitual_pct:+.1f}% vs habitual")
+        tend = {"BAJANDO": "↘️ BAJANDO", "SUBIENDO": "↗️ SUBIENDO", "ESTABLE": "→ ESTABLE"}.get(score.tendencia)
+        if tend:
+            partes.append(tend)
+        lines.append("📊 " + " · ".join(partes))
+        if score.historico:
+            hist = " → ".join(_usd(p, cur) for p in score.historico + [offer.price])
+            lines.append(f"📈 Histórico: {hist}")
+        for nota in score.notas:
+            lines.append(f"💬 {esc(nota)}")
+        if score.aprendiendo:
+            lines.append(f"🧠 APRENDIENDO · {score.consultas} consultas acumuladas (la referencia se afina con el tiempo)")
+    else:
+        lines.append(f"💬 {esc(', '.join(decision.reasons))}")
+
+    if offer.outbound:
+        lines.append(f"🧭 Ida: {esc(format_leg(offer.outbound))}")
+    else:
+        lines.append("🧭 directo" if offer.stops == 0 else f"🧭 {offer.stops} escala(s)")
+    if pax > 1 and route.children:
+        lines.append("<i>Chicos cotizados como adultos: el precio real puede ser algo menor.</i>")
+    if decision.looks_like_error_fare:
+        lines.append("⚡ <i>Si te sirve, reservá rápido: estas tarifas duran horas. "
+                     "No compres hotel no reembolsable hasta que el pasaje esté emitido.</i>")
     lines += ["", f"🔗 {google_flights_link(route, offer)}"]
     return "\n".join(lines)
 

@@ -131,6 +131,14 @@ class Storage:
         ).fetchone()
         return row[0] if row else None
 
+    def recent_prices(self, route_key: str, n: int = 6) -> list[float]:
+        """Últimos `n` precios registrados (del más viejo al más nuevo)."""
+        rows = self.conn.execute(
+            "SELECT price FROM price_history WHERE route_key=? ORDER BY seen_at DESC, id DESC LIMIT ?",
+            (route_key, n),
+        ).fetchall()
+        return [r[0] for r in reversed(rows)]
+
     def route_stats(self, route_key: str, days: int = 30) -> dict | None:
         """Resumen de lo encontrado para una ruta en los últimos `days` días."""
         since = (date.today() - timedelta(days=days)).isoformat()
