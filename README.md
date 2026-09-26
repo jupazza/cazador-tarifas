@@ -10,14 +10,15 @@ feeds de ofertas agregada.
 
 ## Cómo funciona
 
-Cada hora GitHub corre el agente, que hace tres cosas:
+Cada 15 minutos GitHub corre el agente, que hace tres cosas:
 
 1. **Comandos de Telegram:** lee lo que le escribiste al bot (`/rutas`, `/crear`, etc.).
 2. **Feeds de ofertas:** lee Promociones Aéreas, Secret Flying y Fly4free.
    Avisa si un post sale de Buenos Aires y dice "tarifa error" o si el precio
    está por debajo del tope de ese destino (`config/feeds.yaml`).
-3. **Precios propios (cada 3 h):** consulta Google Flights para cada ruta, en 3
-   fechas que van rotando dentro de la ventana. Avisa si el precio:
+3. **Precios propios (rotación):** en cada corrida consulta Google Flights para
+   las 5 rutas que hace más tiempo que no se miran (cada ruta, aprox. cada hora),
+   en 2 fechas que van rotando dentro de la ventana. Avisa si el precio:
    - es igual o menor al **tope** de la ruta, o
    - está un **X% por debajo** de la mediana de los últimos 30 días.
 
@@ -55,11 +56,10 @@ En **Settings → Secrets and variables → Actions → Variables**:
 
 | Variable | Default | Qué cambia |
 |---|---|---|
-| `HORAS_ENTRE_BARRIDOS` | 3 | Cada cuántas horas consulta Google Flights |
-| `FECHAS_POR_RUTA` | 3 | Fechas probadas por ruta en cada barrido |
+| `RUTAS_POR_CORRIDA` | 5 | Rutas consultadas en Google Flights en cada corrida |
+| `FECHAS_POR_RUTA` | 2 | Fechas probadas por ruta en cada consulta |
 
-Consumo estimado: unos 1.200 minutos/mes de Actions (el plan gratis de repos
-privados trae 2.000).
+El repo es público, así que los minutos de GitHub Actions son ilimitados.
 
 ## Límites
 
