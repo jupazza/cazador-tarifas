@@ -3,8 +3,9 @@ name: cazador-tarifas
 on:
   schedule:
     # Cada 15 minutos (minutos corridos: GitHub demora los cron en punto).
-    # Cada corrida lee los feeds y los comandos de Telegram; cada 3 h además
-    # consulta precios en Google Flights.
+    # Cada corrida lee los feeds y los comandos de Telegram, y consulta en
+    # Google Flights las 5 rutas que hace más tiempo que no se miran
+    # (cada ruta queda revisada aprox. cada hora).
     - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
     inputs:
@@ -13,7 +14,7 @@ on:
         required: false
         default: ""
       forzar_barrido:
-        description: "Consultar precios ahora aunque no hayan pasado 3 h"
+        description: "Consultar TODAS las rutas ahora (no solo las que tocan)"
         type: boolean
         default: false
 
@@ -42,8 +43,8 @@ jobs:
         env:
           PYTHONPATH: src
           PRICE_SOURCE: ${{ vars.PRICE_SOURCE || 'fastflights' }}
-          HORAS_ENTRE_BARRIDOS: ${{ vars.HORAS_ENTRE_BARRIDOS || '3' }}
-          FECHAS_POR_RUTA: ${{ vars.FECHAS_POR_RUTA || '3' }}
+          RUTAS_POR_CORRIDA: ${{ vars.RUTAS_POR_CORRIDA || '5' }}
+          FECHAS_POR_RUTA: ${{ vars.FECHAS_POR_RUTA || '2' }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_ALLOWED_CHAT_IDS: ${{ vars.TELEGRAM_ALLOWED_CHAT_IDS }}
