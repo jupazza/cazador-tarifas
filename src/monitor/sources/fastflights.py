@@ -127,6 +127,31 @@ class FastFlightsSource(PriceSource):
 
         return offers
 
+    def verify(self, route: RouteQuery, offer: Offer) -> bool | None:
+        """Repite la búsqueda para las fechas exactas de la oferta."""
+        max_stops = 0 if route.nonstop else None
+        pax = Passengers(adults=max(route.adults + route.children, 1))
+        dep, ret = offer.depart_date, offer.return_date
+        if route.is_open_jaw and ret:
+            ida = self._one_way(route, route.origin, route.dest, dep, pax, max_stops)
+            vuelta = self._one_way(route, route.ret_origin, route.origin, ret, pax, max_stops)
+            if not (ida and vuelta):
+                return None
+            precio = ida.price + vuelta.price
+        else:
+            legs = [FlightQuery(date=dep.isoformat(), from_airport=route.origin,
+                                to_airport=route.dest, max_stops=max_stops)]
+            trip = "one-way"
+            if ret:
+                legs.append(FlightQuery(date=ret.isoformat(), from_airport=route.dest,
+                                        to_airport=route.origin, max_stops=max_stops))
+                trip = "round-trip"
+            found = self._offers(route, legs, trip, pax, dep, ret)
+            if not found:
+                return None
+            precio = min(o.price for o in found)
+        return precio <= offer.price * 1.05
+
     def _offers(self, route, legs, trip, pax, dep, ret) -> list[Offer]:
         query = create_query(
             flights=legs,

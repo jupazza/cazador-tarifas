@@ -15,3 +15,8 @@ class PriceSource(ABC):
     def search(self, route: RouteQuery) -> list[Offer]:
         """Retorna as ofertas encontradas para a rota (pode ser lista vazia)."""
         raise NotImplementedError
+
+    def verify(self, route: RouteQuery, offer: Offer) -> bool | None:
+        """Vuelve a consultar las mismas fechas. True = sigue disponible,
+        False = ya no está, None = no se pudo verificar."""
+        return None
