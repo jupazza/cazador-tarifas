@@ -1,28 +1,40 @@
-"""Prueba variantes de búsqueda en Google Flights para encontrar qué falla."""
-from fast_flights import FlightQuery, Passengers, create_query, get_flights
+"""Prueba qué páginas de promociones de aerolíneas se pueden leer desde GitHub."""
+import re
 
+import requests
 
-def probar(nombre, legs, trip, pax):
-    q = create_query(flights=[FlightQuery(date=d, from_airport=a, to_airport=b) for a, b, d in legs],
-                     trip=trip, seat="economy", passengers=pax, currency="USD", language="es")
+UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/128.0 Safari/537.36")
+PAGINAS = {
+    "Aerolíneas (descuentos)": "https://www.aerolineas.com.ar/viaja-con-descuento",
+    "Aerolíneas (hot sale)": "https://www.aerolineas.com.ar/hotsale",
+    "LATAM": "https://www.latamairlines.com/ar/es/ofertas/ofertas-latam",
+    "Iberia": "https://www.iberia.com/ar/ofertas/vuelos/viajar/",
+    "Air Europa": "https://www.aireuropa.com/ar/es/vuelos/ofertas",
+    "Copa": "https://www.copaair.com/es-ar/ofertas/",
+    "JetSMART": "https://jetsmart.com/ar/es/ofertas",
+    "Flybondi": "https://flybondi.com/ar/ofertas",
+    "GOL": "https://www.voegol.com.br/es-ar/ofertas",
+    "American": "https://www.aa.com/i18n/travel-info/special-offers/special-offers.jsp",
+    "Turkish": "https://www.turkishairlines.com/es-ar/flights/special-offers/",
+    "Emirates": "https://www.emirates.com/ar/spanish/special-offers/",
+    "Air France": "https://wwws.airfrance.com.ar/es/ofertas",
+    "Ethiopian": "https://www.ethiopianairlines.com/ar/offers",
+}
+PRECIO = re.compile(r"(?:USD|U\$[SD]|US\$|ARS|\$)\s?[\d.,]{2,}", re.I)
+
+for nombre, url in PAGINAS.items():
     try:
-        res = get_flights(q)
-        precios = sorted(f.price for f in res if f.price)
-        print(f"OK   {nombre}: {len(res)} resultados, más barato {precios[:1]}")
+        r = requests.get(url, headers={"User-Agent": UA, "Accept-Language": "es-AR,es;q=0.9"}, timeout=25)
+        html = r.text
+        texto = re.sub(r"<script.*?</script>|<style.*?</style>", " ", html, flags=re.S | re.I)
+        texto = re.sub(r"<[^>]+>", "\n", texto)
+        lineas = [l.strip() for l in texto.split("\n") if len(l.strip()) > 3]
+        precios = [l for l in lineas if PRECIO.search(l)]
+        titulo = re.search(r"<title>(.*?)</title>", html, re.S | re.I)
+        print(f"{nombre}: HTTP {r.status_code} · {len(html)} bytes · {len(lineas)} líneas de texto · "
+              f"{len(precios)} con precio · título={titulo.group(1).strip()[:60] if titulo else '-'}")
+        for l in precios[:3]:
+            print(f"      ej: {l[:100]}")
     except Exception as e:
-        print(f"FALLA {nombre}: {type(e).__name__}: {e}")
-
-
-ny = [("EZE", "JFK", "2027-07-14"), ("JFK", "EZE", "2027-08-06")]
-probar("NY jul27 ida+vuelta 1 adulto", ny, "round-trip", Passengers(adults=1))
-probar("NY jul27 ida+vuelta 2 adultos", ny, "round-trip", Passengers(adults=2))
-probar("NY jul27 ida+vuelta 2a+2 chicos", ny, "round-trip", Passengers(adults=2, children=2))
-probar("NY jul27 ida+vuelta 4 adultos", ny, "round-trip", Passengers(adults=4))
-probar("NY ene27 ida+vuelta 1 adulto", [("EZE", "JFK", "2027-01-14"), ("JFK", "EZE", "2027-01-24")], "round-trip", Passengers(adults=1))
-probar("NY jul27 solo ida 1 adulto", ny[:1], "one-way", Passengers(adults=1))
-oj = [("EZE", "JFK", "2027-07-14"), ("MIA", "EZE", "2027-08-06")]
-probar("Multidestino jul27 1 adulto", oj, "multi-city", Passengers(adults=1))
-probar("Multidestino jul27 4 adultos", oj, "multi-city", Passengers(adults=4))
-probar("Multidestino ene27 1 adulto", [("EZE", "JFK", "2027-01-14"), ("MIA", "EZE", "2027-01-28")], "multi-city", Passengers(adults=1))
-probar("Tokio dic26 1 adulto", [("EZE", "NRT", "2026-12-12"), ("NRT", "EZE", "2027-01-06")], "round-trip", Passengers(adults=1))
-probar("Tokio dic26 4 adultos", [("EZE", "NRT", "2026-12-12"), ("NRT", "EZE", "2027-01-06")], "round-trip", Passengers(adults=4))
+        print(f"{nombre}: ERROR {type(e).__name__}: {e}")
