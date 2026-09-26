@@ -1,5 +1,5 @@
 # FEEDS RSS de sitios que publican ofertas y tarifas error.
-# Se leen en cada corrida (cada hora). La primera vez se marca todo como
+# Se leen en cada corrida (cada ~15 min). La primera vez se marca todo como
 # leído sin avisar, para no mandarte posts viejos.
 
 feeds:
@@ -15,16 +15,33 @@ feeds:
     url: https://www.fly4free.com/feed/
     avisar_todo_desde_buenos_aires: true
 
+  - nombre: Travel-Dealz
+    url: https://travel-dealz.com/feed/
+    avisar_todo_desde_buenos_aires: true   # global, fuerte en tarifas error y business
+
+  - nombre: Aerofertas
+    url: https://www.aerofertas.com/feed/
+    avisar_todo_desde_buenos_aires: true   # en español, mayormente desde España
+
+  - nombre: Melhores Destinos
+    url: https://www.melhoresdestinos.com.br/feed
+    avisar_todo_desde_buenos_aires: true   # Brasil; avisa si menciona Buenos Aires/Argentina
+
+# Probados el 26/09/2026 y descartados (bloquean bots o no tienen feed):
+# Turismocity, ErrorFareAlerts, Airfarewatchdog, Passagens Imperdíveis.
+
 # Palabras que indican que un post sale de Buenos Aires (feeds internacionales)
 origen: ["Buenos Aires", "Argentina", "EZE", "Ezeiza", "Aeroparque"]
 
 # Si el post dice alguna de estas, se avisa siempre como POSIBLE TARIFA ERROR
 palabras_error:
   ["tarifa error", "error de tarifa", "error fare", "mistake fare", "glitch",
-   "price error", "pricing error", "precio error", "error de precio"]
+   "price error", "pricing error", "precio error", "error de precio",
+   "erro tarifario", "erro de tarifa", "tarifa erro", "tarifa de erro"]
 
 # Posts que no interesan (paquetes con hotel, entradas, etc.)
-excluir: ["paquete", "paquetes", "all inclusive", "hotel", "crucero", "entradas", "tickets"]
+excluir: ["paquete", "paquetes", "all inclusive", "hotel", "crucero", "entradas", "tickets",
+          "cruise", "cruzeiro", "pacote", "pacotes", "hotels", "/night", "per night"]
 
 # Para Promociones Aéreas: avisa si el precio del título está por debajo del
 # tope del destino. Ej: "Vuelos a Milán a partir de U$D 913" -> Europa, tope 650.
