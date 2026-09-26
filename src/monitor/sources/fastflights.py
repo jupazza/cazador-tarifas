@@ -62,9 +62,9 @@ class FastFlightsSource(PriceSource):
         if start > end:
             print(f"[aviso] {route.name}: la ventana de ida ya pasó — editala con /editar", file=sys.stderr)
             return offers
-        samples = int(os.environ.get("FECHAS_POR_RUTA", "3"))
-        # rota la grilla de fechas en cada barrido (cambia cada 3 h)
-        rotation = int(time.time() // (3 * 3600)) + (route.id or 0)
+        samples = int(os.environ.get("FECHAS_POR_RUTA", "2"))
+        # rota la grilla de fechas: cambia cada hora, así cada consulta prueba días distintos
+        rotation = int(time.time() // 3600) + (route.id or 0)
 
         dep_dates = sample_dates(start, end, max_samples=samples, rotation=rotation)
         ret_dates: list[date] = []
