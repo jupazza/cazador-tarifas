@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import argparse
 import os
+import subprocess
 import sys
+import time
 import traceback
 
 from dotenv import load_dotenv
@@ -26,8 +28,8 @@ from .telegram import TelegramClient
 # Rotación: en cada corrida (cada ~15 min) se consultan en Google Flights solo
 # las rutas que hace más tiempo que no se miran, así cada ruta se revisa
 # aproximadamente cada hora sin disparar muchas consultas juntas.
-RUTAS_POR_CORRIDA = int(os.environ.get("RUTAS_POR_CORRIDA", "5"))
-MINUTOS_ENTRE_CONSULTAS = float(os.environ.get("MINUTOS_ENTRE_CONSULTAS", "45"))
+RUTAS_POR_CORRIDA = int(os.environ.get("RUTAS_POR_CORRIDA", "4"))
+MINUTOS_ENTRE_CONSULTAS = float(os.environ.get("MINUTOS_ENTRE_CONSULTAS", "30"))
 
 
 def pick_routes(storage: Storage, limit: int = RUTAS_POR_CORRIDA,
@@ -90,6 +92,82 @@ def run_sweep(storage: Storage, dry_run: bool = False, source_name: str = "fastf
 
     print(f"[fin] {len(routes)} rutas, {alerts} alerta(s)")
     return alerts
+
+
+# --- modo continuo -----------------------------------------------------------
+# GitHub dispara los cron muy de vez en cuando (a veces 5 veces por día), así que
+# el bot corre en una sola ejecución larga que escucha Telegram en vivo, lee los
+# feeds y va rotando rutas; al terminar, el workflow lo vuelve a lanzar.
+FEEDS_CADA_MIN = float(os.environ.get("FEEDS_CADA_MIN", "5"))
+BARRIDO_CADA_MIN = float(os.environ.get("BARRIDO_CADA_MIN", "10"))
+GUARDAR_CADA_MIN = float(os.environ.get("GUARDAR_CADA_MIN", "30"))
+
+
+def save_db() -> None:
+    """Guarda data/history.db en el repo (solo dentro de GitHub Actions)."""
+    if os.environ.get("GITHUB_ACTIONS") != "true":
+        return
+    cmds = [
+        "git add -f data/history.db",
+        "git -c user.name=cazador-bot -c user.email=cazador-bot@users.noreply.github.com "
+        "commit -m 'chore: actualiza historial [skip ci]' || true",
+        "git pull --rebase --autostash -q || true",
+        "git push -q || true",
+    ]
+    for c in cmds:
+        subprocess.run(c, shell=True, check=False)
+    print("[guardar] historial guardado en el repo")
+
+
+def run_loop(minutes: float, dry_run: bool = False, source_name: str = "fastflights",
+             sleep=time.sleep, clock=time.time) -> None:
+    load_dotenv()
+    storage = Storage()
+    storage.seed_routes(load_routes_from_yaml(CONFIG_PATH))
+    end = clock() + minutes * 60
+    last_feeds = last_sweep = last_save = -1e18
+    print(f"[loop] modo continuo por {minutes:.0f} min")
+    while clock() < end:
+        # 1) Telegram: espera hasta 20 s por mensajes nuevos (respuesta casi instantánea)
+        try:
+            if os.environ.get("TELEGRAM_CHAT_ID") and not dry_run:
+                n = poll_and_handle(storage, wait=20)
+                if n:
+                    print(f"[bot] {n} comando(s) procesado(s)")
+            else:
+                sleep(20)
+        except Exception:
+            print(f"[error] bot:\n{traceback.format_exc()}", file=sys.stderr)
+            sleep(20)
+        now = clock()
+        # 2) feeds de ofertas
+        if now - last_feeds >= FEEDS_CADA_MIN * 60:
+            last_feeds = now
+            try:
+                n = check_feeds(storage, send=_telegram_sender(dry_run))
+                if n:
+                    print(f"[feeds] {n} alerta(s) enviada(s)")
+            except Exception:
+                print(f"[error] feeds:\n{traceback.format_exc()}", file=sys.stderr)
+            if not dry_run:
+                _weekly_heartbeat(storage)
+        # 3) rotación de rutas en Google Flights
+        if now - last_sweep >= BARRIDO_CADA_MIN * 60:
+            last_sweep = now
+            routes = pick_routes(storage)
+            if routes:
+                print(f"[info] consultando {len(routes)} ruta(s): {', '.join('#' + str(r.id) for r in routes)}")
+                try:
+                    run_sweep(storage, dry_run=dry_run, source_name=source_name, routes=routes)
+                    storage.mark_sweep_done()
+                except Exception:
+                    print(f"[error] barrido:\n{traceback.format_exc()}", file=sys.stderr)
+        # 4) guardar historial
+        if now - last_save >= GUARDAR_CADA_MIN * 60:
+            last_save = now
+            save_db()
+    save_db()
+    print("[loop] fin del turno; el workflow lo relanza")
 
 
 def _telegram_sender(dry_run: bool):
@@ -202,7 +280,11 @@ def main() -> None:
     p.add_argument("--bot-only", action="store_true", help="solo procesa comandos, sin barrido")
     p.add_argument("--command", help="ejecuta un comando del bot (ej: '/borrar 3') y sale")
     p.add_argument("--no-feeds", action="store_true", help="no lee los feeds RSS")
+    p.add_argument("--loop", type=float, metavar="MIN", help="modo continuo durante MIN minutos")
     args = p.parse_args()
+    if args.loop:
+        run_loop(args.loop, dry_run=args.dry_run, source_name=args.source)
+        return
     tick(
         dry_run=args.dry_run,
         source_name=args.source,

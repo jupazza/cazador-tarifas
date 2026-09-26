@@ -347,7 +347,7 @@ def _allowed_chat_ids() -> set[int]:
     return ids
 
 
-def poll_and_handle(storage: Storage, telegram: TelegramClient | None = None) -> int:
+def poll_and_handle(storage: Storage, telegram: TelegramClient | None = None, wait: int = 0) -> int:
     """Lee comandos nuevos de Telegram, los ejecuta y responde. Devuelve cuántos trató."""
     allowed = _allowed_chat_ids()
     if not allowed:
@@ -361,7 +361,7 @@ def poll_and_handle(storage: Storage, telegram: TelegramClient | None = None) ->
 
     handled = 0
     max_id: int | None = None
-    for update in telegram.get_updates(offset=offset):
+    for update in telegram.get_updates(offset=offset, timeout=wait):
         max_id = update["update_id"]
         msg = update.get("message") or update.get("edited_message")
         if not msg or "text" not in msg:
