@@ -2,11 +2,10 @@ name: cazador-tarifas
 
 on:
   schedule:
-    # Cada 15 minutos (minutos corridos: GitHub demora los cron en punto).
-    # Cada corrida lee los feeds y los comandos de Telegram, y consulta en
-    # Google Flights las 5 rutas que hace más tiempo que no se miran
-    # (cada ruta queda revisada aprox. cada hora).
-    - cron: "7,22,37,52 * * * *"
+    # Modo continuo: cada corrida queda prendida ~5,5 horas (responde Telegram
+    # al instante, lee feeds cada 5 min y consulta 4 rutas cada 10 min) y al
+    # terminar se relanza sola. Este cron es solo el respaldo por si se corta.
+    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       command:
@@ -20,6 +19,7 @@ on:
 
 permissions:
   contents: write             # para guardar data/history.db en el repo
+  actions: write              # para relanzarse sola al terminar
 
 concurrency:
   group: monitor
@@ -28,7 +28,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
 
@@ -43,8 +43,11 @@ jobs:
         env:
           PYTHONPATH: src
           PRICE_SOURCE: ${{ vars.PRICE_SOURCE || 'fastflights' }}
-          RUTAS_POR_CORRIDA: ${{ vars.RUTAS_POR_CORRIDA || '5' }}
+          RUTAS_POR_CORRIDA: ${{ vars.RUTAS_POR_CORRIDA || '4' }}
           FECHAS_POR_RUTA: ${{ vars.FECHAS_POR_RUTA || '2' }}
+          FEEDS_CADA_MIN: ${{ vars.FEEDS_CADA_MIN || '5' }}
+          BARRIDO_CADA_MIN: ${{ vars.BARRIDO_CADA_MIN || '10' }}
+          MINUTOS_ENTRE_CONSULTAS: ${{ vars.MINUTOS_ENTRE_CONSULTAS || '30' }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_ALLOWED_CHAT_IDS: ${{ vars.TELEGRAM_ALLOWED_CHAT_IDS }}
@@ -56,7 +59,7 @@ jobs:
           elif [ "$FORZAR" = "true" ]; then
             python -m monitor.main --sweep-now
           else
-            python -m monitor.main
+            python -m monitor.main --loop 330
           fi
 
       - name: Guardar historial
@@ -66,4 +69,11 @@ jobs:
           git config user.email "cazador-bot@users.noreply.github.com"
           git add -f data/history.db || true
           git commit -m "chore: actualiza historial [skip ci]" || echo "sin cambios"
+          git pull --rebase --autostash -q || true
           git push || true
+
+      - name: Relanzar modo continuo
+        if: success() && (github.event.inputs.command || '') == '' && github.event.inputs.forzar_barrido != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run monitor.yml --ref main -R ${{ github.repository }}
