@@ -5,18 +5,17 @@ import requests
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/128.0 Safari/537.36")
 CANDIDATOS = {
-    "2 Turismocity": ["https://www.turismocity.com.ar/promociones_aereas/rss",
-                      "https://www.turismocity.com.ar/promociones_aereas/feed",
-                      "https://www.turismocity.com.ar/rss"],
-    "3 Aerofertas": ["https://www.aerofertas.com/feed/", "https://www.aerofertas.com/rss"],
-    "8 Travel-Dealz": ["https://travel-dealz.com/feed/", "https://travel-dealz.com/tag/error-fares/feed/"],
-    "9 ErrorFareAlerts": ["https://errorfarealerts.com/feed/", "https://errorfarealerts.com/?feed=rss2"],
-    "10 Airfarewatchdog": ["https://www.airfarewatchdog.com/blog/feed/", "https://www.airfarewatchdog.com/rss/",
-                           "https://www.airfarewatchdog.com/feed/"],
-    "11 Melhores Destinos": ["https://www.melhoresdestinos.com.br/feed", "https://www.melhoresdestinos.com.br/feed/"],
-    "12 Passagens Imperdíveis": ["https://passagensimperdiveis.com.br/feed/"],
-    "Secret Flying (reintento)": ["https://www.secretflying.com/feed/",
-                                  "https://www.secretflying.com/posts/category/error-fare/feed/"],
+    "12 Passagens Imperdíveis": ["https://passagensimperdiveis.com.br/feed", "https://passagensimperdiveis.com.br/?feed=rss2",
+                                 "https://passagensimperdiveis.com.br/rss", "https://www.passagensimperdiveis.com.br/feed/"],
+    "9 ErrorFareAlerts": ["https://errorfarealerts.com/en/feed/", "https://errorfarealerts.com/feed/atom/",
+                          "https://errorfarealerts.com/?lang=en&feed=rss2"],
+    "10 Airfarewatchdog": ["https://www.airfarewatchdog.com/blog/rss/", "https://blog.airfarewatchdog.com/feed/",
+                           "https://www.airfarewatchdog.com/blog/feed/?format=rss"],
+    "2 Turismocity (móvil)": ["https://m.turismocity.com.ar/promociones_aereas/rss"],
+    "Secret Flying (Argentina)": ["https://www.secretflying.com/posts/category/argentina/feed/",
+                                  "https://www.secretflying.com/feed/?paged=1"],
+    "Travel-Dealz (errores)": ["https://travel-dealz.com/tag/error-fares/feed/"],
+    "Melhores Destinos (erro)": ["https://www.melhoresdestinos.com.br/tag/erro-tarifario/feed"],
 }
 
 for nombre, urls in CANDIDATOS.items():
