@@ -55,6 +55,56 @@ CIUDADES = {
 }
 
 
+# Sitio oficial de cada aerolínea (para comprar directo: si cancelan una tarifa
+# error, reclamar a la aerolínea es más fácil que a una agencia).
+AEROLINEAS = {
+    "aerolineas argentinas": ("Aerolíneas Argentinas", "https://www.aerolineas.com.ar"),
+    "latam": ("LATAM", "https://www.latamairlines.com/ar/es"),
+    "american": ("American Airlines", "https://www.aa.com"),
+    "delta": ("Delta", "https://www.delta.com"),
+    "united": ("United", "https://www.united.com"),
+    "iberia": ("Iberia", "https://www.iberia.com/ar/"),
+    "air europa": ("Air Europa", "https://www.aireuropa.com/ar/es/"),
+    "ita": ("ITA Airways", "https://www.ita-airways.com"),
+    "air france": ("Air France", "https://wwws.airfrance.com.ar"),
+    "klm": ("KLM", "https://www.klm.com.ar"),
+    "lufthansa": ("Lufthansa", "https://www.lufthansa.com/ar/es"),
+    "tap": ("TAP", "https://www.flytap.com/es-ar"),
+    "british airways": ("British Airways", "https://www.britishairways.com"),
+    "avianca": ("Avianca", "https://www.avianca.com/ar/es/"),
+    "copa": ("Copa", "https://www.copaair.com/es-ar/"),
+    "aeromexico": ("Aeroméxico", "https://aeromexico.com/es-ar"),
+    "gol": ("GOL", "https://www.voegol.com.br/es-ar"),
+    "azul": ("Azul", "https://www.voeazul.com.br"),
+    "jetsmart": ("JetSMART", "https://jetsmart.com/ar/es/"),
+    "flybondi": ("Flybondi", "https://flybondi.com/ar"),
+    "sky": ("SKY", "https://www.skyairline.com/argentina"),
+    "arajet": ("Arajet", "https://www.arajet.com/es"),
+    "emirates": ("Emirates", "https://www.emirates.com/ar/spanish/"),
+    "qatar": ("Qatar Airways", "https://www.qatarairways.com/es-ar"),
+    "turkish": ("Turkish Airlines", "https://www.turkishairlines.com/es-ar/"),
+    "ethiopian": ("Ethiopian", "https://www.ethiopianairlines.com"),
+    "air canada": ("Air Canada", "https://www.aircanada.com"),
+}
+
+
+def airline_links(carrier: str) -> list[tuple[str, str]]:
+    """Aerolíneas mencionadas en `carrier` con su sitio oficial (sin repetir)."""
+    import re
+    import unicodedata
+
+    txt = unicodedata.normalize("NFKD", carrier or "")
+    txt = "".join(c for c in txt if not unicodedata.combining(c)).lower()
+    out, seen = [], set()
+    for key, (name, url) in AEROLINEAS.items():
+        if re.search(r"(?<![a-z])" + re.escape(key) + r"(?![a-z])", txt) and name not in seen:
+            if key == "ita" and "ita airways" not in txt and not re.search(r"(?<![a-z])ita(?![a-z])", txt):
+                continue
+            seen.add(name)
+            out.append((name, url))
+    return out
+
+
 def ciudad(code: str) -> str:
     return CIUDADES.get(code, code)
 
@@ -128,6 +178,9 @@ def format_alert(route: RouteQuery, offer: Offer, decision: AlertDecision, score
         lines.append("⚡ <i>Si te sirve, reservá rápido: estas tarifas duran horas. "
                      "No compres hotel no reembolsable hasta que el pasaje esté emitido.</i>")
     lines += ["", f"🔗 {google_flights_link(route, offer)}"]
+    links = airline_links(offer.carrier)
+    if links:
+        lines.append("🛒 Comprar directo: " + " · ".join(f'<a href="{u}">{esc(n)}</a>' for n, u in links))
     return "\n".join(lines)
 
 

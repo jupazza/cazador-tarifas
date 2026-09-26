@@ -102,6 +102,9 @@ def _route_line(r: RouteQuery, storage: Storage) -> str:
         f"   🎯 {esc(' · '.join(crit) or 'sin criterio de alerta')} ({r.currency}, total)",
     ]
     lines += _diagnosis(r, storage)
+    mins = storage.minutes_since_checked(r.key)
+    if mins != float("inf"):
+        lines.append(f"   🕒 consultada hace {mins:.0f} min")
     return "\n".join(lines)
 
 
@@ -109,7 +112,7 @@ def _diagnosis(r: RouteQuery, storage: Storage) -> list[str]:
     """Diagnóstico de lo encontrado en los últimos 30 días."""
     st = storage.route_stats(r.key)
     if not st:
-        return ["   ⏳ todavía sin precios (se consulta cada 3 h)"]
+        return ["   ⏳ todavía sin precios (cada ruta se consulta más o menos cada hora)"]
     cur = r.currency
     pax = r.adults + r.children
     pp = f" ({st['min'] / pax:,.0f} c/u)" if pax > 1 else ""
@@ -140,8 +143,9 @@ def cmd_list(args, storage) -> str:
     if not routes:
         return "No hay rutas activas. Creá una con /crear."
     hrs = storage.hours_since_last_sweep()
-    ult = "nunca" if hrs == float("inf") else f"hace {hrs:.1f} h"
-    header = f"📋 <b>Rutas vigiladas: {len(routes)}</b> · último barrido de precios: {ult}"
+    ult = "nunca" if hrs == float("inf") else f"hace {hrs * 60:.0f} min"
+    header = (f"📋 <b>Rutas vigiladas: {len(routes)}</b> · última consulta de precios: {ult}\n"
+              f"<i>Cada ruta se revisa aprox. cada hora; los sitios de ofertas cada 15 min.</i>")
     return header + "\n\n" + "\n\n".join(_route_line(r, storage) for r in routes)
 
 

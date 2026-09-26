@@ -293,6 +293,16 @@ class Storage:
         last = datetime.strptime(raw, "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
         return (datetime.now(timezone.utc) - last).total_seconds() / 3600
 
+    def minutes_since_checked(self, route_key: str) -> float:
+        raw = self.kv_get(f"checked_{route_key}")
+        if not raw:
+            return math.inf
+        last = datetime.strptime(raw, "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - last).total_seconds() / 60
+
+    def mark_checked(self, route_key: str) -> None:
+        self.kv_set(f"checked_{route_key}", _utc_now())
+
     def mark_sweep_done(self) -> None:
         self.kv_set("last_sweep_at", _utc_now())
 

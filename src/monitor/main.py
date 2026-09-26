@@ -23,19 +23,36 @@ from .sources import get_source
 from .storage import Storage
 from .telegram import TelegramClient
 
-# Cada cuántas horas se consultan precios en Google Flights (las corridas
-# intermedias solo leen los feeds y los comandos de Telegram).
-SWEEP_INTERVAL_H = float(os.environ.get("HORAS_ENTRE_BARRIDOS", "3"))
+# Rotación: en cada corrida (cada ~15 min) se consultan en Google Flights solo
+# las rutas que hace más tiempo que no se miran, así cada ruta se revisa
+# aproximadamente cada hora sin disparar muchas consultas juntas.
+RUTAS_POR_CORRIDA = int(os.environ.get("RUTAS_POR_CORRIDA", "5"))
+MINUTOS_ENTRE_CONSULTAS = float(os.environ.get("MINUTOS_ENTRE_CONSULTAS", "45"))
 
 
-def run_sweep(storage: Storage, dry_run: bool = False, source_name: str = "fastflights") -> int:
+def pick_routes(storage: Storage, limit: int = RUTAS_POR_CORRIDA,
+                min_minutes: float = MINUTOS_ENTRE_CONSULTAS) -> list:
+    """Rutas activas con la consulta más vieja primero (nunca consultadas antes)."""
+    candidates = []
+    for r in storage.list_routes(active_only=True):
+        mins = storage.minutes_since_checked(r.key)
+        if mins >= min_minutes:
+            candidates.append((mins, r))
+    candidates.sort(key=lambda t: -t[0])
+    return [r for _, r in candidates[:limit]]
+
+
+def run_sweep(storage: Storage, dry_run: bool = False, source_name: str = "fastflights",
+              routes: list | None = None) -> int:
     source = get_source(source_name)
     notifier = None  # se crea solo si hay algo que avisar
     delivery_broken = False  # si falla un envío, el resto solo se imprime
 
-    routes = storage.list_routes(active_only=True)
+    if routes is None:
+        routes = storage.list_routes(active_only=True)
     alerts = 0
     for route in routes:
+        storage.mark_checked(route.key)
         # búsqueda + base de datos: si falla una ruta, siguen las demás
         try:
             offers = source.search(route)
@@ -167,11 +184,12 @@ def tick(
 
     if skip_sweep:
         return
-    due = force_sweep or storage.hours_since_last_sweep() >= SWEEP_INTERVAL_H
-    if not due:
-        print(f"[info] barrido salteado ({storage.hours_since_last_sweep():.1f} h desde el último)")
+    routes = storage.list_routes(active_only=True) if force_sweep else pick_routes(storage)
+    if not routes:
+        print("[info] ninguna ruta toca consultar en esta corrida")
         return
-    run_sweep(storage, dry_run=dry_run, source_name=source_name)
+    print(f"[info] consultando {len(routes)} ruta(s): {', '.join('#' + str(r.id) for r in routes)}")
+    run_sweep(storage, dry_run=dry_run, source_name=source_name, routes=routes)
     storage.mark_sweep_done()
 
 
