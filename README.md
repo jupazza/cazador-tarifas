@@ -13,7 +13,7 @@ feeds de ofertas agregada.
 Cada 15 minutos GitHub corre el agente, que hace tres cosas:
 
 1. **Comandos de Telegram:** lee lo que le escribiste al bot (`/rutas`, `/crear`, etc.).
-2. **Feeds de ofertas:** lee Promociones Aéreas, Secret Flying y Fly4free.
+2. **Feeds de ofertas:** lee Promociones Aéreas, Fly4free, Travel-Dealz, Aerofertas y Melhores Destinos.
    Avisa si un post sale de Buenos Aires y dice "tarifa error" o si el precio
    está por debajo del tope de ese destino (`config/feeds.yaml`).
 3. **Precios propios (rotación):** en cada corrida consulta Google Flights para
