@@ -18,6 +18,34 @@ _esc = esc
 
 
 def google_flights_link(route: RouteQuery, offer: Offer) -> str:
+    """Link que abre Google Flights directo en la búsqueda (ruta, fechas y pasajeros).
+
+    Usa el parámetro `tfs` (el mismo que arma Google al buscar); si algo falla,
+    cae al link de texto `q=`, que abre Google Flights pero no siempre la búsqueda.
+    """
+    try:
+        from fast_flights import FlightQuery, Passengers, create_query
+
+        stops = 0 if route.nonstop else None
+        legs = [FlightQuery(date=offer.depart_date.isoformat(), from_airport=route.origin,
+                            to_airport=route.dest, max_stops=stops)]
+        trip = "one-way"
+        if offer.return_date:
+            vuelta_desde = route.ret_origin if route.is_open_jaw else route.dest
+            legs.append(FlightQuery(date=offer.return_date.isoformat(), from_airport=vuelta_desde,
+                                    to_airport=route.origin, max_stops=stops))
+            trip = "multi-city" if route.is_open_jaw else "round-trip"
+        query = create_query(
+            flights=legs, trip=trip, seat="economy",
+            passengers=Passengers(adults=max(route.adults, 1), children=route.children),
+            language="es-419", currency=offer.currency,
+        )
+        return "https://www.google.com/travel/flights/search?" + urlencode(query.params())
+    except Exception:
+        return _google_flights_text_link(route, offer)
+
+
+def _google_flights_text_link(route: RouteQuery, offer: Offer) -> str:
     q = f"Flights from {route.origin} to {route.dest} on {offer.depart_date}"
     if route.is_open_jaw and offer.return_date:
         q = (f"Multi-city flights {route.origin} to {route.dest} on {offer.depart_date}, "
