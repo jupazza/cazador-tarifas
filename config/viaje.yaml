@@ -4,7 +4,7 @@
 # Los mensajes van a un grupo de Telegram propio (chat_id), no al chat de siempre.
 
 nombre: "Viaje julio 2027 · NY + Orlando + Miami"
-chat_id: null            # ID del grupo de Telegram del viaje (lo completa Claude)
+chat_id: -5339879903      # grupo de Telegram "VIAJE JULIO 2027"
 moneda: USD
 hora_reporte: 10         # hora de Buenos Aires
 consultar_cada_min: 60
