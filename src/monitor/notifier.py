@@ -128,9 +128,20 @@ def format_alert(route: RouteQuery, offer: Offer, decision: AlertDecision, score
 
     if decision.looks_like_error_fare:
         header = f"🚨 <b>POSIBLE TARIFA ERROR</b>\n✈️ <b>{ciudad(route.origin)} → {esc(ciudad(route.dest))} · {_usd(offer.price, cur)}</b>"
+    elif decision.nuevo_minimo:
+        header = f"🏆 <b>NUEVO PRECIO MÍNIMO</b>\n✈️ <b>{ciudad(route.origin)} → {esc(ciudad(route.dest))} · {_usd(offer.price, cur)}</b>"
+    elif decision.cerca_minimo:
+        header = f"📉 <b>PRECIO EN EL MÍNIMO</b>\n✈️ <b>{ciudad(route.origin)} → {esc(ciudad(route.dest))} · {_usd(offer.price, cur)}</b>"
     else:
         header = f"✈️ <b>{ciudad(route.origin)} → {esc(ciudad(route.dest))} · {_usd(offer.price, cur)}</b>"
     lines = [header, f"<i>{esc(route.name)}</i>"]
+    if decision.cerca_minimo:
+        if decision.nuevo_minimo:
+            lines.append(f"🏆 Más barato que el mínimo anterior ({_usd(decision.minimo, cur)}): ahora este es el nuevo mínimo")
+        elif offer.price == decision.minimo:
+            lines.append(f"📉 Igual al mínimo de los últimos 30 días ({_usd(decision.minimo, cur)})")
+        else:
+            lines.append(f"📉 Solo {decision.sobre_minimo_pct:.1f}% arriba del mínimo de 30 días ({_usd(decision.minimo, cur)})")
 
     if score is not None:
         accion = "REVISAR YA" if score.value >= 75 else "REVISAR"

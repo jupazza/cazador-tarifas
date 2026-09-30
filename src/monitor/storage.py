@@ -179,6 +179,15 @@ class Storage:
         ).fetchall()
         return any(abs(p[0] - price) <= p[0] * tolerance for p in rows)
 
+    def lowest_alert_since(self, route_key: str, hours: float) -> float | None:
+        """Precio más bajo avisado para la ruta en las últimas `hours` horas."""
+        since = (datetime.now(timezone.utc) - timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%S")
+        row = self.conn.execute(
+            "SELECT MIN(price) FROM alerts_sent WHERE route_key=? AND sent_at>=?",
+            (route_key, since),
+        ).fetchone()
+        return row[0] if row and row[0] is not None else None
+
     def mark_alerted(self, route_key: str, price: float) -> None:
         self.conn.execute(
             "INSERT OR REPLACE INTO alerts_sent (route_key, price, sent_at) VALUES (?,?,?)",
