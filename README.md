@@ -32,6 +32,17 @@ respaldo). Mientras está prendido hace tres cosas:
 
 Todo el historial se guarda en `data/history.db` dentro del repo.
 
+## Viaje de julio 2027 (seguimiento aparte)
+
+`config/viaje.yaml` define un viaje puntual (Bs As → Nueva York, Nueva York → Orlando,
+Miami → Bs As, cada tramo ±2 días, 4 pasajeros). Cada hora el bot consulta todos los
+tramos de solo ida en Google Flights; si el mejor precio de un tramo baja del mínimo
+visto, avisa al instante, y todos los días a las 10:00 manda un reporte con la mejor
+combinación, la comparación con ayer y con el precio de referencia, y links a Google
+Flights, Cheapflights, Expedia, Skyscanner, eDreams y CheapOair. Los mensajes van al
+grupo de Telegram del viaje (`chat_id` en el yaml), no al chat de siempre. `/viaje`
+pide el reporte en el momento.
+
 ## Comandos del bot
 
 | Comando | Qué hace |
