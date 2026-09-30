@@ -15,6 +15,7 @@ for _stream in (sys.stdout, sys.stderr):
     except (AttributeError, ValueError):
         pass
 
+from . import viaje
 from .bot import handle_message, poll_and_handle
 from .config import CONFIG_PATH, load_routes_from_yaml
 from .feeds import check_feeds
@@ -162,7 +163,13 @@ def run_loop(minutes: float, dry_run: bool = False, source_name: str = "fastflig
                     storage.mark_sweep_done()
                 except Exception:
                     print(f"[error] barrido:\n{traceback.format_exc()}", file=sys.stderr)
-        # 4) guardar historial
+        # 4) viaje de julio 2027: consulta cada hora, avisa bajas y reporte diario
+        if not dry_run:
+            try:
+                viaje.tick(storage)
+            except Exception:
+                print(f"[error] viaje:\n{traceback.format_exc()}", file=sys.stderr)
+        # 5) guardar historial
         if now - last_save >= GUARDAR_CADA_MIN * 60:
             last_save = now
             save_db()

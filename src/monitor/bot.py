@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import sys
 import traceback
@@ -21,7 +22,8 @@ HELP = (
     "    ej: <code>/editar 3 tope 400</code>\n"
     "/borrar ID — elimina (confirmá con <code>/borrar ID si</code>)\n"
     "/pausar ID   /activar ID\n"
-    "/ejemplo [ID] — muestra cómo se ve una alerta (precio inventado)"
+    "/ejemplo [ID] — muestra cómo se ve una alerta (precio inventado)\n"
+    "/viaje — reporte del viaje de julio 2027 (se manda al grupo del viaje)"
 )
 
 
@@ -316,6 +318,15 @@ def _flag(s: str) -> bool:
     return s.strip().lower() in ("si", "sí", "true", "1", "yes", "on")
 
 
+def cmd_viaje(args, storage) -> str:
+    from . import viaje
+
+    cfg = viaje.load_viaje()
+    if not cfg:
+        return "No hay viaje configurado (config/viaje.yaml)."
+    return viaje.reporte(storage, cfg, titulo="Reporte a pedido")
+
+
 COMMANDS = {
     "start": cmd_help, "help": cmd_help, "ayuda": cmd_help,
     "rutas": cmd_list, "listar": cmd_list, "list": cmd_list,
@@ -324,6 +335,7 @@ COMMANDS = {
     "borrar": cmd_delete, "eliminar": cmd_delete,
     "pausar": cmd_pause, "activar": cmd_activate,
     "ejemplo": cmd_example,
+    "viaje": cmd_viaje,
 }
 
 
@@ -344,7 +356,28 @@ def handle_message(text: str, storage: Storage) -> str:
 def _allowed_chat_ids() -> set[int]:
     raw = os.environ.get("TELEGRAM_ALLOWED_CHAT_IDS") or os.environ.get("TELEGRAM_CHAT_ID", "")
     ids = {int(x) for x in raw.replace(";", ",").split(",") if x.strip().lstrip("-").isdigit()}
+    try:  # el grupo del viaje también puede mandar comandos
+        from .viaje import chat_id, load_viaje
+
+        cfg = load_viaje()
+        extra = chat_id(cfg) if cfg else None
+        if ids and extra and extra.lstrip("-").isdigit():
+            ids.add(int(extra))
+    except Exception:
+        pass
     return ids
+
+
+def _registrar_chat(storage: Storage, update: dict) -> None:
+    """Anota los grupos donde está el bot (para saber el ID del grupo del viaje)."""
+    for key in ("message", "edited_message", "my_chat_member"):
+        chat = (update.get(key) or {}).get("chat")
+        if chat and chat.get("type") in ("group", "supergroup", "channel"):
+            vistos = json.loads(storage.kv_get("chats_vistos") or "{}")
+            if vistos.get(str(chat["id"])) != chat.get("title", ""):
+                vistos[str(chat["id"])] = chat.get("title", "")
+                storage.kv_set("chats_vistos", json.dumps(vistos, ensure_ascii=False))
+                print(f"[bot] grupo visto: {chat.get('title')} ({chat['id']})")
 
 
 def poll_and_handle(storage: Storage, telegram: TelegramClient | None = None, wait: int = 0) -> int:
@@ -363,6 +396,10 @@ def poll_and_handle(storage: Storage, telegram: TelegramClient | None = None, wa
     max_id: int | None = None
     for update in telegram.get_updates(offset=offset, timeout=wait):
         max_id = update["update_id"]
+        try:
+            _registrar_chat(storage, update)
+        except Exception:
+            pass
         msg = update.get("message") or update.get("edited_message")
         if not msg or "text" not in msg:
             continue
