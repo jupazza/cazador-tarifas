@@ -1,0 +1,50 @@
+# Seguimiento aparte: viaje familiar de julio/agosto 2027.
+# Se consulta cada hora en Google Flights; avisa al instante si algún tramo
+# baja de precio y manda un reporte diario a las 10:00 (hora de Buenos Aires).
+# Los mensajes van a un grupo de Telegram propio (chat_id), no al chat de siempre.
+
+nombre: "Viaje julio 2027 · NY + Orlando + Miami"
+chat_id: null            # ID del grupo de Telegram del viaje (lo completa Claude)
+moneda: USD
+hora_reporte: 10         # hora de Buenos Aires
+consultar_cada_min: 60
+
+# 2 adultos (45) + chicos de 12 y 8. Para las aerolíneas el de 12 paga tarifa
+# de adulto, así que son 3 adultos + 1 menor (igual que en tus capturas).
+pasajeros:
+  adultos: 3
+  chicos: 1
+  edades_chicos: [8]
+  detalle: "2 adultos + chicos de 12 y 8"
+
+# Precio de referencia: multidestino American visto el 30/09/2026 (3 tramos directos).
+referencia:
+  precio: 6525
+  detalle: "multidestino American de tus capturas del 30/09"
+
+tramos:
+  - id: A
+    nombre: "Buenos Aires → Nueva York"
+    fecha: 2027-07-15
+    flex: 2
+    pares: [[EZE, JFK], [EZE, EWR]]
+    ciudades: [EZE, NYC]      # para las webs que aceptan "todos los aeropuertos"
+  - id: B
+    nombre: "Nueva York → Orlando"
+    fecha: 2027-07-23
+    flex: 2
+    pares: [[LGA, MCO], [JFK, MCO], [EWR, MCO]]
+    ciudades: [NYC, ORL]
+  - id: C
+    nombre: "Miami → Buenos Aires"
+    fecha: 2027-08-06
+    flex: 2
+    pares: [[MIA, EZE]]
+    ciudades: [MIA, EZE]
+
+# Tus dos itinerarios (fechas exactas de cada tramo).
+itinerarios:
+  - nombre: "Opción 1 · 15/07 · 23/07 · 06/08"
+    fechas: {A: 2027-07-15, B: 2027-07-23, C: 2027-08-06}
+  - nombre: "Opción 2 · 14/07 · 22/07 · 06/08"
+    fechas: {A: 2027-07-14, B: 2027-07-22, C: 2027-08-06}
