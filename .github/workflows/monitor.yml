@@ -48,6 +48,9 @@ jobs:
           FEEDS_CADA_MIN: ${{ vars.FEEDS_CADA_MIN || '5' }}
           BARRIDO_CADA_MIN: ${{ vars.BARRIDO_CADA_MIN || '10' }}
           MINUTOS_ENTRE_CONSULTAS: ${{ vars.MINUTOS_ENTRE_CONSULTAS || '30' }}
+          CERCA_MINIMO_PCT: ${{ vars.CERCA_MINIMO_PCT || '5' }}
+          CERCA_MINIMO_REPETIR_HORAS: ${{ vars.CERCA_MINIMO_REPETIR_HORAS || '24' }}
+          PYTHONUNBUFFERED: "1"
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_ALLOWED_CHAT_IDS: ${{ vars.TELEGRAM_ALLOWED_CHAT_IDS }}
