@@ -23,6 +23,10 @@ respaldo). Mientras está prendido hace tres cosas:
    fechas que van rotando dentro de la ventana. Avisa si el precio:
    - es igual o menor al **tope** de la ruta, o
    - está un **X% por debajo** de la mediana de los últimos 30 días.
+   - es igual o menor al **mínimo de los últimos 30 días**, o hasta un **5% más caro**
+     (aviso "📉 PRECIO EN EL MÍNIMO" o "🏆 NUEVO PRECIO MÍNIMO"). Para no llenarte de
+     mensajes, este aviso llega como mucho 1 vez por ruta cada 24 h, salvo que aparezca
+     un precio más bajo que el último avisado.
 
    Si la baja supera el 55%, la alerta llega marcada como **🚨 POSIBLE TARIFA ERROR**.
 
@@ -62,6 +66,8 @@ En **Settings → Secrets and variables → Actions → Variables**:
 | `FECHAS_POR_RUTA` | 2 | Fechas probadas por ruta en cada consulta |
 | `BARRIDO_CADA_MIN` | 10 | Minutos entre barridos de precios |
 | `FEEDS_CADA_MIN` | 5 | Minutos entre lecturas de feeds |
+| `CERCA_MINIMO_PCT` | 5 | % sobre el mínimo de 30 días que todavía avisa |
+| `CERCA_MINIMO_REPETIR_HORAS` | 24 | Horas antes de repetir el aviso de mínimo en una ruta (0 = sin freno) |
 
 El repo es público, así que los minutos de GitHub Actions son ilimitados.
 
