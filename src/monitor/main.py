@@ -120,6 +120,17 @@ def save_db() -> None:
     print("[guardar] historial guardado en el repo")
 
 
+def _save_and_reopen(storage: Storage) -> Storage:
+    """Guarda en el repo y reabre la base: si `git pull` reemplazó el archivo,
+    la conexión vieja queda de solo lectura."""
+    try:
+        storage.conn.close()
+    except Exception:
+        pass
+    save_db()
+    return Storage()
+
+
 def run_loop(minutes: float, dry_run: bool = False, source_name: str = "fastflights",
              sleep=time.sleep, clock=time.time) -> None:
     load_dotenv()
@@ -172,7 +183,7 @@ def run_loop(minutes: float, dry_run: bool = False, source_name: str = "fastflig
         # 5) guardar historial
         if now - last_save >= GUARDAR_CADA_MIN * 60:
             last_save = now
-            save_db()
+            storage = _save_and_reopen(storage)
     save_db()
     print("[loop] fin del turno; el workflow lo relanza")
 

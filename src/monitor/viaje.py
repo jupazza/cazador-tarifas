@@ -470,8 +470,11 @@ def tick(storage: Storage, send=None, buscar=buscar_google, cfg: dict | None = N
             send("👋 Este grupo es solo para el <b>" + cfg["nombre"] + "</b>.\n"
                  "Consulto cada hora, te aviso al instante si baja algún tramo y todos los días a las "
                  f"{cfg.get('hora_reporte', 10)}:00 te mando el resumen. Pedilo cuando quieras con /viaje.")
-            send(reporte(storage, cfg, titulo="Primer reporte"))
+            # se marca ANTES de mandar: si algo falla, no se repite en cada vuelta
             storage.kv_set("viaje_bienvenida", destino)
+            if ahora.astimezone(ART).hour >= int(cfg.get("hora_reporte", 10)):
+                storage.kv_set("viaje_reporte_fecha", ahora.astimezone(ART).date().isoformat())
+            send(reporte(storage, cfg, titulo="Primer reporte"))
             _guardar_previo(storage, cfg)
         except Exception:
             print(f"[error] viaje bienvenida:\n{traceback.format_exc()}", file=sys.stderr)
@@ -481,8 +484,8 @@ def tick(storage: Storage, send=None, buscar=buscar_google, cfg: dict | None = N
     hoy = local.date().isoformat()
     if local.hour >= int(cfg.get("hora_reporte", 10)) and storage.kv_get("viaje_reporte_fecha") != hoy:
         try:
+            storage.kv_set("viaje_reporte_fecha", hoy)  # antes de mandar: nunca repetir
             send(reporte(storage, cfg))
-            storage.kv_set("viaje_reporte_fecha", hoy)
             _guardar_previo(storage, cfg)
         except Exception:
             print(f"[error] viaje reporte:\n{traceback.format_exc()}", file=sys.stderr)
