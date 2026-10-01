@@ -23,7 +23,11 @@ HELP = (
     "/borrar ID — elimina (confirmá con <code>/borrar ID si</code>)\n"
     "/pausar ID   /activar ID\n"
     "/ejemplo [ID] — muestra cómo se ve una alerta (precio inventado)\n"
-    "/viaje — reporte del viaje de julio 2027 (se manda al grupo del viaje)"
+    "/viaje — reporte del viaje de julio 2027 (se manda al grupo del viaje)\n\n"
+    "<b>También podés escribirme normal</b> (en este chat):\n"
+    "• <i>Agregá Buenos Aires - Punta Cana del 20/12/2026 al 27/12/2026 para 4</i>\n"
+    "• <i>Sacá la ruta 18</i>\n"
+    "Siempre te pido confirmación antes de cambiar algo."
 )
 
 
@@ -407,7 +411,11 @@ def poll_and_handle(storage: Storage, telegram: TelegramClient | None = None, wa
         if allowed and chat_id not in allowed:
             continue
         try:
-            reply = handle_message(msg["text"], storage)
+            if msg["text"].strip().startswith("/"):
+                reply = handle_message(msg["text"], storage)
+            else:  # castellano común: "agregá Buenos Aires - Punta Cana del 20/12 al 27/12"
+                from .lenguaje import responder
+                reply = responder(msg["text"], storage, chat_id)
         except Exception:
             traceback.print_exc()
             reply = "⚠️ error interno al procesar el comando"
