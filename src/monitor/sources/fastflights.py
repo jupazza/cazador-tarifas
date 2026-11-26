@@ -108,7 +108,25 @@ class FastFlightsSource(PriceSource):
             ]
             trip = "one-way"
             ret: date | None = None
-            if route.return_after_days:
+            if route.ret_range:
+                # ida y vuelta normal, pero la vuelta sale de su propia ventana de
+                # fechas (ej. ida 15–18/07, vuelta 05–08/08). La vuelta se elige
+                # desfasada de la ida para que, con las horas, se prueben TODAS
+                # las combinaciones ida × vuelta.
+                r0, r1 = route.ret_range
+                n = (r1 - r0).days + 1
+                k = rotation * len(dep_dates) + i
+                ret = r0 + timedelta(days=(k + k // n) % n)
+                legs.append(
+                    FlightQuery(
+                        date=ret.isoformat(),
+                        from_airport=route.dest,
+                        to_airport=route.origin,
+                        max_stops=max_stops,
+                    )
+                )
+                trip = "round-trip"
+            elif route.return_after_days:
                 # una sola duración de viaje (punto medio del rango),
                 # para no multiplicar la cantidad de búsquedas
                 lo, hi = route.return_after_days

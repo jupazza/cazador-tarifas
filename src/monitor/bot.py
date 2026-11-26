@@ -95,6 +95,8 @@ def _route_line(r: RouteQuery, storage: Storage) -> str:
         nights = "solo ida"
     if r.is_open_jaw:
         nights = f"vuelta {r.ret_origin}→{r.origin} entre {r.ret_range[0]} y {r.ret_range[1]}"
+    elif r.ret_range:
+        nights = f"vuelta entre {r.ret_range[0]} y {r.ret_range[1]}"
     ida = (f"ida en los próximos {r.rolling_days} días" if r.rolling_days
            else f"ida {r.depart_range[0]}→{r.depart_range[1]}")
     crit = []

@@ -55,7 +55,10 @@ class RouteQuery:
         """
         if self.id is not None:
             return f"r{self.id}"
-        rt = "ow" if self.return_after_days is None else f"{self.return_after_days[0]}-{self.return_after_days[1]}"
+        if self.ret_range and not self.is_open_jaw:
+            rt = f"{self.ret_range[0]}_{self.ret_range[1]}"
+        else:
+            rt = "ow" if self.return_after_days is None else f"{self.return_after_days[0]}-{self.return_after_days[1]}"
         return f"{self.origin}-{self.dest}-{rt}-{self.adults}p"
 
 

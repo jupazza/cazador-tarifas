@@ -15,6 +15,7 @@
 # adults / children: pasajeros (el precio y el tope son el TOTAL de todos)
 # return_from + return_range: multidestino (la vuelta sale de otra ciudad,
 #               en su propia ventana de fechas)
+# return_range sin return_from: ida y vuelta con ventana de VUELTA propia
 #
 # Los topes son valores de arranque (aprox. la mitad de lo que suele salir);
 # ajustalos con /editar ID tope VALOR cuando veas los precios reales.
@@ -43,6 +44,8 @@ routes:
   - {name: "Julio 2027: Bs As ⇄ Nueva York (familia)", origin: EZE, dest: JFK, depart_range: ["2027-07-12", "2027-07-18"], return_after_days: [21, 25], adults: 2, children: 2, target_price: 2400, drop_pct: 30}
   - {name: "Julio 2027: Bs As ⇄ Miami (familia)", origin: EZE, dest: MIA, depart_range: ["2027-07-12", "2027-07-18"], return_after_days: [21, 25], adults: 2, children: 2, target_price: 2000, drop_pct: 30}
   - {name: "Julio 2027: Bs As → Nueva York / Miami → Bs As (familia)", origin: EZE, dest: JFK, depart_range: ["2027-07-14", "2027-07-18"], return_from: MIA, return_range: ["2027-08-02", "2027-08-08"], adults: 2, children: 2, target_price: 2600, drop_pct: 30}
+  # Ya tiene pasajes por USD 4.000 (18/07→05/08): avisa SOLO si aparece algo más barato
+  - {name: "Julio 2027: Bs As ⇄ Miami — ida 15–18/07, vuelta 05–08/08 (familia)", origin: EZE, dest: MIA, depart_range: ["2027-07-15", "2027-07-18"], return_range: ["2027-08-05", "2027-08-08"], adults: 2, children: 2, target_price: 3999}
 
   # --- Japón (2 adultos + 2 chicos; tope = total 4 personas; ventana móvil 10 meses) ---
   - {name: "Japón: Bs As ⇄ Tokio Narita (familia)", origin: EZE, dest: NRT, rolling_days: 300, return_after_days: [21, 30], adults: 2, children: 2, target_price: 4000, drop_pct: 35}
